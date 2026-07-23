@@ -1,0 +1,2 @@
+- iOS设计规范skill位于./skills
+- 先读取MVP.md

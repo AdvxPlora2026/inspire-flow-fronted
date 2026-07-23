@@ -10,9 +10,39 @@
 		B9D36BC63011E5B200A39BA2 /* inspireFlow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = inspireFlow.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		B9D36C083011FC3F00A39BA2 /* Exceptions for "inspireFlow" folder in "inspireFlow" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Agent.md,
+				MVP.md,
+				newIDEA.md,
+				RingSDK/protocol.md,
+				RingSDK/README.md,
+				RingSDK/ring_sound_use.md,
+				skills/skills/.gitignore,
+				skills/skills/README.md,
+				"skills/skills/skills/animation-vocabulary/SKILL.md",
+				"skills/skills/skills/apple-design/SKILL.md",
+				"skills/skills/skills/emil-design-eng/SKILL.md",
+				"skills/skills/skills/find-animation-opportunities/SKILL.md",
+				"skills/skills/skills/improve-animations/AUDIT.md",
+				"skills/skills/skills/improve-animations/PLAN-TEMPLATE.md",
+				"skills/skills/skills/improve-animations/SKILL.md",
+				"skills/skills/skills/pick-ui-library/SKILL.md",
+				"skills/skills/skills/review-animations/SKILL.md",
+				"skills/skills/skills/review-animations/STANDARDS.md",
+			);
+			target = B9D36BC53011E5B200A39BA2 /* inspireFlow */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		B9D36BC83011E5B200A39BA2 /* inspireFlow */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				B9D36C083011FC3F00A39BA2 /* Exceptions for "inspireFlow" folder in "inspireFlow" target */,
+			);
 			path = inspireFlow;
 			sourceTree = "<group>";
 		};
@@ -256,6 +286,8 @@
 				DEVELOPMENT_TEAM = P6PV2R9443;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = inspireFlow;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -288,6 +320,8 @@
 				DEVELOPMENT_TEAM = P6PV2R9443;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = inspireFlow;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
