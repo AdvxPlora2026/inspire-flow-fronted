@@ -13,11 +13,6 @@
 
 import asyncio
 import sys
-from pathlib import Path
-
-# 将 ringSDK 目录加入 Python 路径
-RING_SDK_DIR = Path(__file__).resolve().parent / "ringSDK"
-sys.path.insert(0, str(RING_SDK_DIR))
 
 import ring_sound as sdk  # noqa: E402
 
@@ -54,7 +49,7 @@ async def main():
         # ===== 步骤 2：连接并读取系统信息 =====
         print(f"\n[2/4] 连接戒指并读取系统信息...")
 
-        async with sdk.connect_ring(address=target_addr) as ring:
+        async with sdk.RingSoundClient(address=target_addr) as ring:
             info = await sdk.get_system_info(ring)
             print(f"  固件版本 : {info.firmware_version}")
             print(f"  设备型号 : {info.model}")
@@ -194,7 +189,7 @@ async def imu_demo():
     print("  PAWN Agent - IMU 数据演示")
     print("=" * 50)
 
-    async with sdk.connect_ring(address=RING_MAC_ADDRESS) as ring:
+    async with sdk.RingSoundClient(address=RING_MAC_ADDRESS) as ring:
         print("\n请单击戒指按键，切换到手势模式...")
         try:
             press = await sdk.wait_sensor_key_single_press_event(ring, timeout_s=30.0)

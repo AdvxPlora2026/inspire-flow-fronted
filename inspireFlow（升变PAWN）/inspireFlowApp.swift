@@ -9,22 +9,17 @@ import SwiftUI
 
 @main
 struct inspireFlowApp: App {
+    @StateObject private var appStore = AppStore()
+    @StateObject private var session = AppSession()
+
     @AppStorage("hasCompletedOnboarding")
     private var hasCompletedOnboarding = false
 
     var body: some Scene {
         WindowGroup {
-            Group {
-                if hasCompletedOnboarding {
-                    ContentView()
-                        .transition(.opacity)
-                } else {
-                    StartView(
-                        hasCompletedOnboarding: $hasCompletedOnboarding
-                    )
-                    .transition(.opacity)
-                }
-            }
+            RootView(hasCompletedOnboarding: $hasCompletedOnboarding)
+            .environmentObject(appStore)
+            .environmentObject(session)
         }
     }
 }
@@ -33,4 +28,6 @@ struct inspireFlowApp: App {
     StartView(
         hasCompletedOnboarding: .constant(true)
     )
+    .environmentObject(AppStore())
+    .environmentObject(AppSession())
 }

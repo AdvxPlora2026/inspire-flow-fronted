@@ -1,372 +1,189 @@
-# inspire-flow-fronted 界面实现 TODO
+curl -fsSL https://chatgpt.com/codex/install.sh | sh
 
-> 设计基调：近黑背景 / 白色文字 / 半透明玻璃卡片 / 白底黑字主按钮
-> 仅使用黑白及透明度构建层级，不依赖颜色表达状态
-> 动画克制，支持 `reduceMotion`；优先使用系统字体、SF Symbols、原生 API
+# inspireFlow Hackathon Execution TODO
 
-### 界面设计准则（所有界面统一遵循）
-
-后续所有界面请统一沿用 inspireFlow 现有设计语言：
-
-- 使用 SwiftUI 原生组件与深色模式
-- 仅以黑白两色及白色透明度构建层级
-- 近黑背景、克制的白色径向渐变、半透明玻璃卡片、连续圆角、细微描边
-- 系统字体和 SF Symbols
-- 保持 20pt 水平边距与清晰紧凑的信息层级
-- 主操作使用白底黑字、次要操作使用透明白底
-- 优先复用现有组件和 NavigationStack
-- 动画仅使用快速可中断的轻微按压或淡入淡出效果
-- 尊重减少动态效果与无障碍设置
-- 避免彩色强调、复杂装饰、夸张阴影、过度动效和不必要的第三方依赖
-
-### 戒指 SDK 集成
-
-> Zilo Whisper Ring SDK v2.0.0（Swift Package + CoreBluetooth），仓库：
-> https://github.com/AdvxPlora2026/zilo-whisper-ring-sdk
+> Goal: deliver one stable, repeatable story instead of 28 disconnected screens.
 >
-> 完整集成清单见 [`TODO-RING-SDK.md`](./TODO-RING-SDK.md)
+> Demo loop: ring intent -> voice capture -> three PAWN questions -> Bilibili production pack -> Injective commercial proof.
+
+## Product UI Iteration TODO
+
+> This is the regular product backlog after the first frontend MVP. Keep each primary view in its own Swift file and share only models, services, theme tokens, and small reusable components.
+>
+> Global design baseline: near-black background, white text, translucent glass cards, white primary buttons with black labels, system fonts, SF Symbols, 20pt horizontal content margins, and hierarchy built with monochrome contrast and opacity. Never rely on color alone for status. Respect Reduce Motion, Dynamic Type, VoiceOver, and keyboard operation throughout.
+
+### Phase 0 - Welcome and app entry
+
+- [X] **First-launch welcome (`StartView`)** - Keep the existing horizontally swipeable card experience as the welcome screen. It appears only before `hasCompletedOnboarding` is set, then routes to the custom login screen; normal launches must not interrupt the user with onboarding again.
+- [ ] Refresh the three welcome cards to explain the current product loop: capture an inspiration, develop it with PAWN, and complete a creator or brand project.
+- [ ] Restyle the welcome cards to the current monochrome visual system while retaining swipe gestures, page progress, Continue/Enter actions, VoiceOver page position, and Reduce Motion behavior.
+- [ ] Add a reusable way to reopen the welcome guide from Help or Settings without changing first-launch completion state.
+
+Acceptance: a clean install shows the swipeable welcome once, completion opens login, relaunch skips welcome, and replaying the guide from Settings does not sign the user out or reset their data.
 
----
+### Phase 1 - Core project and inspiration loop
 
-## 一、蓝牙戒指配对
+- [ ] **Project detail and progress** - Show project name, current stage, overall progress, recent activity, creative goal, and entry points for outline, storyboard, script, and teleprompter artifacts. Use 20pt horizontal margins, continuous-corner glass cards, system fonts, and SF Symbols; distinguish progress through white brightness, line style, icons, and text rather than colored badges.
+- [ ] **PAWN project collaboration** - Give each project an independent conversation context with a project summary card, message list, composer, attachment entry, stop-generation action, and regenerate action. PAWN messages use translucent white cards, user messages use white cards with black text, and the native-material composer supports lightweight streaming output that respects Reduce Motion.
+- [ ] **Inspiration recording and live transcription** - Show recording state, monospaced duration, live transcript, pause, resume, finish, and cancel actions, with clear microphone permission and local-save status. Use a prominent white recording control and restrained waveform that does not depend on color to communicate state; provide complete VoiceOver labels and announcements.
+- [ ] **Inspiration detail** - Show original text, recording, transcript, creation time, privacy state, AI summary, tags, and associated project. Support edit, delete, and move-to-project; use grouped glass cards and a white primary action, with deletion communicated by text, icon, and confirmation rather than red alone.
+- [ ] **Assign inspiration to project** - Let users search and select an existing project, create a project, or leave the inspiration unassigned, with recent and recommended projects. Use native search, a single-choice list, and fixed bottom confirmation; selection uses a white surface, black text, and checkmark while unselected rows remain translucent.
+- [ ] Define first-class persisted models for projects, inspirations, recordings, conversations, messages, artifacts, activities, attachments, and commercial brief fields instead of encoding structured values in free text.
+- [ ] Connect creator and brand views to the same project lifecycle and persisted IDs.
+- [X] **Post-registration creator profile setup** - After a creator's first successful registration, collect display name, biography, social-platform account names, contact methods, creative categories, and collaboration availability. Let the creator explicitly control public workshop visibility and brand-only contact disclosure per field; support skip-and-complete-later without blocking personal creation.
+- [ ] **Public creator workshop** - Let creators intentionally publish selected profile fields, project summaries, capabilities, availability, and chosen artifacts for brand discovery. Private inspirations, recordings, PAWN conversations, drafts, and contact details remain private by default, with preview and confirmation before publishing or revoking public data.
+- [ ] **Brand interest and one-way follow** - Let brands follow or express project interest from public creator profiles. Add a visible toolbar information/notification button on creator surfaces, not a primary tab, showing which brands followed and their stated intent. Authorized brands may view creator-provided contact methods; creators can see brand identity and intent but cannot obtain brand contact details through this feature.
 
-- [ ] **设备搜索**：扫描周围 BLE 设备，显示设备名与信号强度
-- [ ] **戒指识别**：通过 NUS Service UUID 过滤并突出 `ring` 设备
-- [ ] **配对确认**：显示戒指名称与地址，用户确认后发起配对
-- [ ] **连接进度**：ProgressView + 阶段文字（扫描中 / 配对中 / 连接中）
-- [ ] **配对成功**：连接成功确认页，展示设备信息与手势设置入口
-- [ ] **搜索不到设备**：空状态说明 + 重新搜索按钮（白底黑字）
-- [ ] **断开重试**：非阻塞提示卡片，显示最近状态，自动重连 + 手动重试
+Acceptance: a user can capture or type an inspiration, assign it to one project, continue the matching PAWN conversation, and reopen the same project and content after relaunch.
 
----
+### Phase 2 - Creation and production tools
 
-## 二、项目详情与进度
+- [ ] **Outline editor** - Edit chapters, paragraph order, chapter goals, and PAWN suggestions; support add, delete, collapse, drag-to-reorder, accept suggestion, and undo. Use monochrome glass cards and native editing controls, keep drag feedback direct and interruptible, and provide undo for destructive frequent edits.
+- [ ] **Storyboard editor** - Present shot cards with number, visual description, dialogue or sound, suggested duration, and filming notes. Support add, duplicate, reorder, and list/compact view switching; use SF Symbols and monospaced shot numbers and durations, with shape, icon, and brightness jointly communicating state.
+- [ ] **Script and teleprompter editor** - Provide structured narration, dialogue, visual cue, and sound-effect editing, plus font size, paragraph spacing, version switching, and teleprompter entry. Keep the editing surface visually quiet, place tools near affected content, and fully support Dynamic Type and keyboard operation.
+- [ ] **Version history** - List outline, storyboard, and script versions with generation source, modification time, and summary. Support difference preview, restore, and duplicate; express differences through weight, strikethrough, icons, and brightness, confirm restoration, and preserve undo.
+- [ ] **Shooting checklist** - Group shots, equipment, props, people, and completion by scene or shooting day. Support check-off, filtering, sorting, and offline access; show completed state with both icon and text, and use only quick press feedback and lightweight haptics for frequent changes.
+- [ ] **Teleprompter** - Provide full-screen prompting, play/pause, scroll speed, font size, line spacing, mirror mode, and quick location. Use pure black with high-contrast white text and a low-distraction material control bar; scrolling must remain smooth and readable with Reduce Motion enabled.
+- [ ] **Media import and attachments** - Import from Photos, Files, Camera, and recording, then show progress, type, size, linked location, rename, and delete. Prefer `PhotosUI`, `fileImporter`, and other Apple APIs; communicate loading, failure, and completion through icon, text, and progress.
+- [ ] **Publishing preview and export** - Preview title, description, cover copy, tags, chapters, subtitles, and platform checklist in one place. Support copy, share, export, and return-to-edit with large content previews and a fixed primary action area; use `ShareLink` where suitable and state included content and format before export.
 
-- [ ] 展示项目名称、当前阶段、整体进度
-- [ ] 最近活动时间线
-- [ ] 创作目标展示
-- [ ] 成果入口：大纲 / 分镜 / 脚本 / 提词稿快捷卡片
-- [ ] 20pt 水平边距，连续圆角玻璃卡片
-- [ ] 进度仅通过白色明暗、线条和文字区分
+Acceptance: generated artifacts can be edited, versioned, used during filming, exported, and restored after app relaunch without losing project context.
 
----
+### Phase 3 - Devices, permissions, and account
 
-## 三、PAWN 项目协作
+- [ ] **Bluetooth ring pairing** - Implement device search, ring identification, pairing confirmation, connection progress, success, not-found, and disconnected retry states with SwiftUI and CoreBluetooth. Keep animation restrained and Reduce Motion aware; persist the CoreBluetooth peripheral UUID rather than a MAC address.
+- [ ] **Headphone management** - Show the current audio input/output route, connection state, available capabilities, microphone test, and switching or Settings entry, including no-device and failure states. Use native audio APIs and never fabricate battery or capabilities the system does not expose.
+- [ ] **Ring device management** - Show paired ring, connection, battery when available, firmware, gesture settings, find-device, reconnect, and unpair. Confirm unpairing, keep live transitions lightweight, and announce material state changes through VoiceOver.
+- [ ] **Ring gesture settings** - Map single, double, and triple press to capture, confirm, pause, or custom actions, with an interaction demo and conflict warning. Use native lists and menus, provide immediate feedback, and support restore defaults.
+- [ ] **Notification settings** - Manage creation reminders, PAWN replies, device disconnects, shooting plans, and project progress. Show system permission state and a Settings deep link; use native grouped toggles with a white tint and neutral, non-coercive permission copy.
+- [ ] **Privacy and permissions** - Show microphone, Bluetooth, Photos, Files, notifications, and local-network permission states plus local encryption, project context, content authorization, and data deletion. Request permissions only at the point of need and use confirmations for dangerous operations.
+- [ ] **Profile** - Show avatar, name, creator biography, project and inspiration statistics, account state, and edit entry, with a reserved location for future account sync. Use a circular avatar, translucent cards, and monospaced statistics without decorative achievement animation.
+- [ ] **General settings** - Add appearance, language, text size, haptics, default content type, default creation goal, storage/cache, Help, and About using native `Form` or `List` behavior and concrete labels.
 
-- [ ] 每个项目独立对话上下文
-- [ ] 项目摘要卡片（名称、阶段、进度）
-- [ ] 消息列表：AI 消息透明白色卡片，用户消息白底黑字
-- [ ] 输入栏使用原生材质，附件入口
-- [ ] 停止生成 / 重新生成操作
-- [ ] 流式输出动画轻量，尊重 `reduceMotion`
+Acceptance: device and permission states come from real system APIs, recover from denial or disconnect, remain usable with accessibility settings, and never claim unavailable hardware information.
+
+### Phase 4 - Global navigation and reusable states
 
----
+- [ ] **Search and filters** - Search across inspirations, projects, conversations, and artifacts, filtered by type, time, status, and privacy. Use `searchable`, native filter menus, and grouped results; emphasize matches through weight and brightness and avoid entry animations that slow repeated search.
+- [ ] **Activity and notification center** - Group PAWN completion, project updates, device states, collaborator actions, and confirmations by time. Support read state, filters, and direct navigation into the corresponding context while preserving a consistent navigation path.
+- [ ] **Empty-state specification** - Create distinct states for no inspirations, projects, messages, media, and search results. Each uses an SF Symbol, short title, supporting copy, and one white primary action without large illustrations or looping animation.
+- [ ] **Loading and generation specification** - Cover initial and paginated loading, PAWN generation, file import, and device connection with low-contrast skeletons, `ProgressView`, explicit status text, and cancel or retry. No indefinite unexplained waiting.
+- [ ] **Error and offline specification** - Cover offline, unavailable service, generation failure, storage failure, and corrupt content with a specific cause, impact, retry, and back action. Preserve unsubmitted input and do not rely on red to communicate severity.
+- [ ] **Permission-denied specification** - Provide separate microphone, Bluetooth, Photos, Files, and notification denial states that explain the affected feature and offer System Settings or Not Now without repeatedly pressuring the user.
+- [ ] **Device disconnect and reconnect specification** - Show a non-blocking banner or compact card with last connection, automatic reconnect progress, manual retry, cancel, and switch-device entry. Use icon, text, and optional haptics with restrained animation.
+- [ ] Build shared state components only after at least two concrete screens need the same behavior; keep feature views in separate files.
 
-## 四、灵感录音与实时转写
+Acceptance: every primary workflow has actionable empty, loading, error, permission-denied, offline, and reconnect behavior, and deep links return users to the correct role and project context.
 
-- [ ] 录音状态展示与持续时间（等宽数字计时）
-- [ ] 实时转写文本滚动展示
-- [ ] 暂停 / 继续 / 结束 / 取消操作
-- [ ] 麦克风权限提示（未授权 → 引导去设置）
-- [ ] 本地保存状态提示
-- [ ] 白色醒目录音主控件，克制波形动画
-- [ ] 支持 VoiceOver
+### Recommended iteration order
 
----
+1. Project detail and persisted domain models.
+2. Inspiration recording, transcription, detail, and assignment.
+3. Per-project PAWN collaboration.
+4. Outline, storyboard, script, and version history.
+5. Teleprompter, shooting checklist, attachments, and export.
+6. Ring pairing, ring management, gestures, and audio routing.
+7. Permissions, settings, profile, search, and activity center.
+8. Reusable empty/loading/error/offline/disconnect states and full accessibility pass.
 
-## 五、灵感详情
+## P0 - Must Work On Stage
 
-- [ ] 原文 / 录音 / 转写内容展示
-- [ ] 创建时间、隐私状态
-- [ ] AI 摘要卡片
-- [ ] 标签与关联项目
-- [ ] 编辑 / 删除（确认对话框，不以红色为唯一警示）/ 转入项目
-- [ ] 分组玻璃卡片，清晰文字层级
+### 1. Capture and PAWN loop
 
----
+- [X] Start and stop capture from the iOS demo.
+- [X] Complete a deterministic three-question PAWN interview.
+- [X] Show a structured Bilibili result: title, hook, outline, and shot list.
+- [X] Keep the demo usable without network access.
+- [ ] Replace simulated answers with speech transcription from the selected audio input.
+- [ ] Save one capture session and its answers under a persistent project ID.
+- [ ] Add a 10-second timeout and a visible retry path for every remote request.
 
-## 六、灵感归属项目
+Acceptance: a judge can complete the flow twice in a row without restarting the app.
 
-- [ ] 搜索并选择现有项目（原生搜索 + 单选列表）
-- [ ] 新建项目入口
-- [ ] 暂时不关联选项
-- [ ] 最近使用 & 推荐项目展示
-- [ ] 选中：白底黑字 + 勾选图标；未选中：透明白底
-- [ ] 底部确认按钮，单一主任务
+### 2. Zilo ring
 
----
+- [X] Repair the local Python event demo import and connection lifecycle.
+- [X] Confirm the compatible Swift package and public API from `AdvxPlora2026/zilo-whisper-ring-sdk` v2.0.0.
+- [X] Add the iOS Bluetooth usage description.
+- [ ] Add the `RingSound` Swift package to Xcode after package resolution is available.
+- [ ] Scan by NUS service and persist the CoreBluetooth peripheral UUID, not a MAC address.
+- [ ] Map key double press to capture, rotate front to confirm, rotate back to cancel, and wave to privacy.
+- [ ] Show disconnect state and one-tap reconnect without blocking the current draft.
 
-## 七、大纲编辑
+Acceptance: at least one physical ring event visibly advances the same business flow shown in the app.
 
-- [ ] 可编辑章节与段落顺序
-- [ ] 章节目标展示
-- [ ] PAWN 修改建议展示
-- [ ] 新增 / 删除 / 折叠 / 拖动排序
-- [ ] 接受建议 / 撤销
-- [ ] 黑白玻璃卡片，明确标题层级
-- [ ] 拖动反馈直接可中断，破坏性操作提供撤销
+### 3. Voice-first interaction
 
----
+- [ ] Record one real utterance through the current system input or viaim route.
+- [ ] Return each PAWN question through private audio output.
+- [ ] Keep each spoken response under 12 seconds and allow repeat/cancel.
+- [ ] Log the selected audio route for debugging without claiming unavailable battery/capability data.
 
-## 八、分镜编辑
+Acceptance: the main task can be completed without touching the phone after the initial screen is open.
 
-- [ ] 镜头卡片：编号（等宽数字）、画面描述、台词/声音、建议时长、拍摄提示
-- [ ] 新增镜头 / 复制 / 排序
-- [ ] 列表视图 / 紧凑视图切换
-- [ ] SF Symbols 呈现编号和时长
-- [ ] 交互状态通过形状、图标和明暗共同表达
+### 4. Backend and PAWN generation
 
----
+- [ ] Implement the API contract in `BACKEND-HANDOFF.md`.
+- [ ] Persist project, capture, conversation, and generated artifact IDs.
+- [ ] Return exactly one question per turn until `ready_to_generate=true`.
+- [ ] Produce schema-valid Bilibili artifacts; reject unstructured model output.
+- [ ] Support idempotency keys so retries never create duplicate captures or answers.
 
-## 九、脚本与提词稿编辑
+Acceptance: the same project remains coherent across voice capture, PAWN questions, and in-app revisions.
 
-- [ ] 结构化编辑：旁白 / 对白 / 画面提示 / 音效
-- [ ] 字体大小、段落间距调节
-- [ ] 版本切换入口
-- [ ] 进入提词模式入口
-- [ ] 高对比排版，编辑区域减少视觉装饰
-- [ ] 适配 Dynamic Type 与键盘操作
+### 5. Injective commercial proof
 
----
+- [ ] Create one fixed commercial brief with budget, deadline, deliverable, and split.
+- [ ] Complete one real Injective testnet transaction: escrow preferred, split settlement acceptable.
+- [ ] Store network, transaction hash, explorer URL, status, amount, and participant addresses.
+- [ ] Bind submission to a specific artifact version hash.
+- [ ] Open the real explorer URL from the app.
+- [ ] Never put raw audio, scripts, private conversation turns, personal data, or access tokens on-chain.
 
-## 十、版本历史
+Acceptance: the judge can independently open and verify the transaction.
 
-- [ ] 大纲 / 分镜 / 脚本历史版本列表
-- [ ] 展示生成来源、修改时间、摘要
-- [ ] 预览差异（粗细、删除线、图标、明暗，不依赖颜色）
-- [ ] 恢复版本（确认流程 + 可撤销）
-- [ ] 创建副本
-- [ ] 纵向时间线或分组列表
+## P1 - Makes The Demo Convincing
 
----
+- [ ] Project detail page with stage, progress, latest capture, and artifact shortcuts.
+- [ ] Commercial task states: funded, accepted, submitted, approved, settled, failed.
+- [ ] Teleprompter with play/pause, next/repeat, speed, font size, and mirror mode.
+- [ ] Ring gesture controls for next, repeat, and pause in teleprompter mode.
+- [ ] Local encrypted file storage with Keychain-held key and protected-file attributes.
+- [ ] Export/share the Bilibili title, description, chapters, and shot list.
+- [ ] Demo reset action that clears local sample state but never sends destructive chain operations.
+- [ ] A visible "Demo fallback" label when simulated hardware or backend responses are used.
 
-## 十一、拍摄清单
+## P2 - After The Hackathon
 
-- [ ] 按场景/拍摄日展示镜头、设备、道具、人员
-- [ ] 完成状态勾选（图标 + 文字双重区分）
-- [ ] 筛选 / 排序
-- [ ] 离线查看支持
-- [ ] 紧凑玻璃卡片，白色进度指示
-- [ ] 轻量触觉反馈
+- [ ] Full outline, storyboard, script, version history, and shooting-list editors.
+- [ ] Cross-project search, attachment management, notifications, and activity center.
+- [ ] Creator profile inference and preference controls.
+- [ ] Multi-collaborator project management and milestone escrow.
+- [ ] Bilibili publishing connector and analytics.
+- [ ] Apple Health and other connector experiments.
 
----
+## Explicitly Out Of Scope
 
-## 十二、提词器
+- Every idea or edit on-chain.
+- NFT or token economy.
+- Automatic legal copyright claims from a content hash.
+- A complete creator marketplace.
+- 28 polished screens before the core loop works.
+- Custom IMU gesture training during the hackathon.
 
-- [ ] 全屏提词，纯黑背景 + 高对比白字
-- [ ] 播放 / 暂停、滚动速度、字号、行距
-- [ ] 镜像模式、快速定位
-- [ ] 控制栏低干扰材质，隐藏非必要装饰
-- [ ] 滚动平稳，支持 `reduceMotion`，动画不影响阅读
+## Final Demo Checklist
 
----
+- [ ] Physical ring charged above 30%; backup ring available if possible.
+- [ ] viaim/system audio route tested in the venue.
+- [ ] Backend health check is green and fallback fixture is bundled.
+- [ ] Injective wallet funded on testnet; explorer URL opens on venue network.
+- [ ] Screen recording prepared as backup.
+- [ ] Demo data reset and all secrets excluded from Git.
+- [ ] Run `xcodebuild` and the backend contract tests before submission.
 
-## 十三、素材导入与附件管理
 
-- [ ] PhotosUI / fileImporter / 相机 / 录音导入
-- [ ] 上传状态、文件类型、大小展示
-- [ ] 关联位置标注
-- [ ] 重命名 / 删除操作
-- [ ] 黑白卡片，加载/失败/完成通过图标+文字+进度表达
+### 额外想法
 
----
-
-## 十四、发布材料预览与导出
-
-- [ ] 标题、简介、封面文案、标签集中预览
-- [ ] 章节 / 字幕 / 平台发布清单
-- [ ] 复制 / 分享（ShareLink）/ 导出文件
-- [ ] 返回修改入口
-- [ ] 大块内容预览 + 固定主操作区
-- [ ] 导出前明确显示内容与格式
-
----
-
-## 十五、耳机设备管理
-
-- [ ] 当前音频输入/输出设备信息
-- [ ] 连接状态、电量/可用能力
-- [ ] 麦克风测试入口
-- [ ] 切换设备入口
-- [ ] 无设备 / 连接失败状态处理
-- [ ] 系统设置跳转，不伪造系统无法提供的信息
-
----
-
-## 十六、戒指设备管理
-
-- [ ] 已配对戒指信息卡片
-- [ ] 连接状态、电量、固件版本
-- [ ] 手势设置入口
-- [ ] 查找设备
-- [ ] 重新连接 / 解除配对（需确认）
-- [ ] 实时状态轻量过渡，支持 VoiceOver 公告
-
----
-
-## 十七、戒指手势设置
-
-- [ ] 单击 / 双击 / 三击手势配置
-- [ ] 动作选项：捕捉灵感 / 确认 / 暂停 / 自定义
-- [ ] 交互演示与冲突提示
-- [ ] 原生列表 + 单选菜单，黑白状态样式
-- [ ] 映射清晰可预测，修改即时反馈
-- [ ] 恢复默认设置
-
----
-
-## 十八、通知设置
-
-- [ ] 通知类型：创作提醒 / PAWN 回复 / 设备断连 / 拍摄计划 / 项目进度
-- [ ] 系统通知权限状态 + 跳转设置入口
-- [ ] 原生 Toggle + 分组列表
-- [ ] 开关强调色白色，说明文字简洁透明
-- [ ] 不使用诱导性授权文案
-
----
-
-## 十九、隐私与授权
-
-- [ ] 权限状态一览：麦克风 / 蓝牙 / 照片 / 文件 / 通知 / 本地网络
-- [ ] 本地加密说明
-- [ ] 项目上下文授权
-- [ ] 内容授权 + 数据删除入口
-- [ ] 清晰分组，黑白图标及状态文字
-- [ ] 权限申请在需要时触发；危险操作有确认流程
-
----
-
-## 二十、个人资料
-
-- [ ] 头像（圆形）、名称、创作者简介
-- [ ] 项目与灵感统计（等宽数字）
-- [ ] 账号状态
-- [ ] 编辑入口 + 未来账号同步预留
-- [ ] 半透明卡片、黑白层级，无装饰动画
-- [ ] **人物画像**：通过日常对话和灵感生成等行为，自动在个人中心内创建创作者人物画像（偏好、风格、常用主题等）
-
----
-
-## 二十一、通用设置
-
-- [ ] 外观 / 语言 / 文字大小
-- [ ] 触觉反馈开关
-- [ ] 默认内容类型 / 默认创作目标
-- [ ] 存储与缓存信息
-- [ ] 帮助 / 关于入口
-- [ ] 优先 SwiftUI Form 或 List，深色黑白设计
-
----
-
-## 二十二、搜索与筛选
-
-- [ ] 跨灵感、项目、对话、成果搜索（`searchable`）
-- [ ] 筛选：类型 / 时间 / 状态 / 隐私级别（原生菜单）
-- [ ] 分组结果列表，匹配通过字体粗细和明暗强调
-- [ ] 搜索即时响应，无进入动画
-
----
-
-## 二十三、全局活动与通知中心
-
-- [ ] 按时间展示 PAWN 生成完成、项目更新等事件
-- [ ] 设备状态 / 协作者操作 / 待确认事项
-- [ ] 已读状态、筛选、跳转目标内容
-- [ ] 分组列表 + 透明白色卡片
-- [ ] 点击直接进入对应上下文，保持导航路径一致
-
----
-
-## 二十四、空状态规范
-
-| 场景 | SF Symbol | 操作 |
-|------|-----------|------|
-| 无灵感 | `lightbulb` | 创建第一条灵感 |
-| 无项目 | `folder` | 新建项目 |
-| 无消息 | `bubble.left` | 开始对话 |
-| 无素材 | `photo.on.rectangle` | 导入素材 |
-| 无搜索结果 | `magnifyingglass` | 修改关键词 |
-- [ ] 黑白双色，充足留白，无大型插画和循环动画
-
----
-
-## 二十五、加载与生成状态
-
-- [ ] 首次加载：低对比骨架屏
-- [ ] 分页加载：底部 ProgressView
-- [ ] PAWN 生成：状态文字 + 进度指示
-- [ ] 文件导入：进度 + 取消
-- [ ] 设备连接：阶段文字 + 重试
-- [ ] 轻量动画，支持 `reduceMotion`
-
----
-
-## 二十六、错误与离线状态
-
-- [ ] 断网 / 服务不可用 / 生成失败 / 存储失败 / 内容损坏
-- [ ] 原因说明 + 影响范围
-- [ ] 重试 / 返回操作
-- [ ] 黑白高对比卡片 + 系统警告图标
-- [ ] 不把红色作为必要表达方式
-- [ ] 文案具体可执行，保留未提交输入
-
----
-
-## 二十七、权限拒绝状态
-
-| 权限 | 影响功能 | 操作 |
-|------|----------|------|
-| 麦克风 | 录音转写 | 前往设置 / 暂不启用 |
-| 蓝牙 | 戒指连接 | 前往设置 / 暂不启用 |
-| 照片 | 素材导入 | 前往设置 / 暂不启用 |
-| 文件 | 附件管理 | 前往设置 / 暂不启用 |
-| 通知 | 消息推送 | 前往设置 / 暂不启用 |
-- [ ] 不施压用户授权，不重复弹出
-
----
-
-## 二十八、设备断连与重连
-
-- [ ] 戒指 / 耳机断连非阻塞提示
-- [ ] 最近连接状态 + 自动重连进度
-- [ ] 手动重试 + 更换设备入口
-- [ ] 顶部横幅或紧凑卡片，不打断创作
-- [ ] 图标 + 文字 + 触觉共同反馈
-- [ ] 重连动画克制且可取消
-
----
-
-## 总览
-
-| 模块 | 状态 |
-|------|------|
-| 蓝牙戒指配对 | 🔲 未开始 |
-| 项目详情与进度 | 🔲 未开始 |
-| PAWN 项目协作 | 🔲 未开始 |
-| 灵感录音与实时转写 | 🔲 未开始 |
-| 灵感详情 | 🔲 未开始 |
-| 灵感归属项目 | 🔲 未开始 |
-| 大纲编辑 | 🔲 未开始 |
-| 分镜编辑 | 🔲 未开始 |
-| 脚本与提词稿编辑 | 🔲 未开始 |
-| 版本历史 | 🔲 未开始 |
-| 拍摄清单 | 🔲 未开始 |
-| 提词器 | 🔲 未开始 |
-| 素材导入与附件管理 | 🔲 未开始 |
-| 发布材料预览与导出 | 🔲 未开始 |
-| 耳机设备管理 | 🔲 未开始 |
-| 戒指设备管理 | 🔲 未开始 |
-| 戒指手势设置 | 🔲 未开始 |
-| 通知设置 | 🔲 未开始 |
-| 隐私与授权 | 🔲 未开始 |
-| 个人资料 | 🔲 未开始 |
-| 通用设置 | 🔲 未开始 |
-| 搜索与筛选 | 🔲 未开始 |
-| 全局活动与通知中心 | 🔲 未开始 |
-| 空状态规范 | 🔲 未开始 |
-| 加载与生成状态 | 🔲 未开始 |
-| 错误与离线状态 | 🔲 未开始 |
-| 权限拒绝状态 | 🔲 未开始 |
-| 戒指 SDK 集成 | 🔲 未开始 |
-| 人物画像 | 🔲 未开始 |
-| 设备断连与重连 | 🔲 未开始 |
+- [ ] 小组件适配，随时随地唤起？（可能无法实现
+- [ ] 上链相关准备
+- [ ]

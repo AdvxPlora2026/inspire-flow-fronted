@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct NewProjectView: View {
+    @EnvironmentObject private var appStore: AppStore
+
     @Environment(\.dismiss)
     private var dismiss
 
@@ -21,6 +23,7 @@ struct NewProjectView: View {
     @State private var initialIdea: String
     @State private var selectedContentType: ProjectContentType
     @State private var selectedGoal: ProjectGoal
+    @State private var selectedKind: ProjectKind
     @State private var remembersContext: Bool
     @State private var isShowingSuccess = false
     @State private var successFeedbackTrigger = 0
@@ -33,6 +36,7 @@ struct NewProjectView: View {
         initialIdea: String = "",
         selectedContentType: ProjectContentType = .video,
         selectedGoal: ProjectGoal = .outline,
+        selectedKind: ProjectKind = .personal,
         remembersContext: Bool = true
     ) {
         _projectName = State(initialValue: projectName)
@@ -41,6 +45,7 @@ struct NewProjectView: View {
             initialValue: selectedContentType
         )
         _selectedGoal = State(initialValue: selectedGoal)
+        _selectedKind = State(initialValue: selectedKind)
         _remembersContext = State(
             initialValue: remembersContext
         )
@@ -59,6 +64,8 @@ struct NewProjectView: View {
                     contentTypeSection
 
                     goalSection
+
+                    projectKindSection
 
                     contextSection
 
@@ -108,7 +115,7 @@ struct NewProjectView: View {
                 dismiss()
             }
         } message: {
-            Text("前端项目已经准备好，后续可以接入 PAWN 和项目存储服务。")
+            Text("项目已保存到本机，PAWN 可以从这里继续维护创作上下文。")
         }
         .sensoryFeedback(
             .success,
@@ -364,6 +371,21 @@ struct NewProjectView: View {
         }
     }
 
+    private var projectKindSection: some View {
+        NewProjectSection(
+            title: "项目类型",
+            detail: selectedKind.title
+        ) {
+            Picker("项目类型", selection: $selectedKind) {
+                ForEach(ProjectKind.allCases) { kind in
+                    Text(kind.title)
+                        .tag(kind)
+                }
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+
     private var createButton: some View {
         Button {
             createProject()
@@ -433,6 +455,11 @@ struct NewProjectView: View {
 
         projectName = normalizedProjectName
         focusedField = nil
+        appStore.createProject(
+            name: projectName,
+            initialIdea: initialIdea,
+            kind: selectedKind
+        )
         successFeedbackTrigger += 1
         isShowingSuccess = true
     }
@@ -755,6 +782,7 @@ enum ProjectGoal: String, CaseIterable, Identifiable {
         NewProjectView()
     }
     .preferredColorScheme(.dark)
+    .environmentObject(AppStore())
 }
 
 #Preview("New Project - Filled") {
@@ -767,4 +795,5 @@ enum ProjectGoal: String, CaseIterable, Identifiable {
         )
     }
     .preferredColorScheme(.dark)
+    .environmentObject(AppStore())
 }

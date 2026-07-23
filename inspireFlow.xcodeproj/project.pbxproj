@@ -17,18 +17,6 @@
 				Agent.md,
 				MVP.md,
 				newIDEA.md,
-				skills/skills/.gitignore,
-				skills/skills/README.md,
-				"skills/skills/skills/animation-vocabulary/SKILL.md",
-				"skills/skills/skills/apple-design/SKILL.md",
-				"skills/skills/skills/emil-design-eng/SKILL.md",
-				"skills/skills/skills/find-animation-opportunities/SKILL.md",
-				"skills/skills/skills/improve-animations/AUDIT.md",
-				"skills/skills/skills/improve-animations/PLAN-TEMPLATE.md",
-				"skills/skills/skills/improve-animations/SKILL.md",
-				"skills/skills/skills/pick-ui-library/SKILL.md",
-				"skills/skills/skills/review-animations/SKILL.md",
-				"skills/skills/skills/review-animations/STANDARDS.md",
 			);
 			target = B9D36BC53011E5B200A39BA2 /* inspireFlow */;
 		};
@@ -285,6 +273,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = inspireFlow;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "用于连接 Zilo Whisper 戒指并读取录音与手势数据";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -319,6 +308,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = inspireFlow;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "用于连接 Zilo Whisper 戒指并读取录音与手势数据";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

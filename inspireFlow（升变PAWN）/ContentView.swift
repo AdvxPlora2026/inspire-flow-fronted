@@ -35,7 +35,7 @@ struct ContentView: View {
             .tag(AppTab.creation)
 
             NavigationStack {
-                CollaborationDemoView()
+                PawnWorkspaceView()
             }
             .tabItem {
                 Label(
@@ -63,9 +63,26 @@ struct ContentView: View {
 
 // MARK: - Inspiration
 
-private struct InspirationDemoView: View {
+struct InspirationDemoView: View {
     @State private var isListening = false
     @State private var privacyLevel: PrivacyLevel = .privateOnly
+    @State private var capturePhase: CapturePhase = .ready
+    @State private var questionIndex = 0
+
+    private let productionQuestions = [
+        ProductionQuestion(
+            prompt: "这条视频最想讲给谁看？",
+            answer: "第一次尝试无屏创作的 B 站创作者"
+        ),
+        ProductionQuestion(
+            prompt: "你希望它是什么形式？",
+            answer: "60 秒现场竖屏短视频"
+        ),
+        ProductionQuestion(
+            prompt: "最重要的开场画面是什么？",
+            answer: "创作者正在拍摄，却突然冒出一个灵感"
+        )
+    ]
 
     var body: some View {
         DemoPageBackground {
@@ -74,6 +91,8 @@ private struct InspirationDemoView: View {
                     PawnStatusCard(isListening: isListening)
 
                     captureButton
+
+                    captureWorkflowSection
 
                     privacySection
 
@@ -99,14 +118,7 @@ private struct InspirationDemoView: View {
 
     private var captureButton: some View {
         Button {
-            withAnimation(
-                .spring(
-                    response: 0.32,
-                    dampingFraction: 0.84
-                )
-            ) {
-                isListening.toggle()
-            }
+            handleCaptureButton()
         } label: {
             HStack(spacing: 14) {
                 Image(
@@ -180,6 +192,89 @@ private struct InspirationDemoView: View {
                 ? "正在捕捉"
                 : "尚未开始"
         )
+    }
+
+    @ViewBuilder
+    private var captureWorkflowSection: some View {
+        switch capturePhase {
+        case .ready, .listening:
+            EmptyView()
+        case .questioning:
+            GlassCard {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("PAWN 追问 \(questionIndex + 1) / \(productionQuestions.count)")
+                        .font(.caption.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    Text(productionQuestions[questionIndex].prompt)
+                        .font(.headline)
+
+                    Button {
+                        answerCurrentQuestion()
+                    } label: {
+                        Label(
+                            productionQuestions[questionIndex].answer,
+                            systemImage: "waveform"
+                        )
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(13)
+                        .background(Color.white, in: RoundedRectangle(cornerRadius: 14))
+                    }
+                    .buttonStyle(PressableButtonStyle())
+                    .accessibilityHint("模拟通过耳机回答当前问题")
+                }
+            }
+        case .generated:
+            GlassCard {
+                VStack(alignment: .leading, spacing: 14) {
+                    Label("创作方案已生成", systemImage: "checkmark.circle.fill")
+                        .font(.headline)
+
+                    ResultLine(label: "标题", value: "我用一枚戒指，接住了差点消失的灵感")
+                    ResultLine(label: "3 秒钩子", value: "最好的创作工具，也许根本没有屏幕。")
+                    ResultLine(label: "结构", value: "灵感丢失 → 戒指唤醒 → 耳机追问 → PAWN 成片")
+                    ResultLine(label: "拍摄", value: "现场走拍、戒指特写、耳机反馈、方案结果页")
+
+                    Button("重新演示") {
+                        resetCaptureDemo()
+                    }
+                    .font(.caption.weight(.semibold))
+                    .buttonStyle(.bordered)
+                    .tint(.white)
+                }
+            }
+        }
+    }
+
+    private func handleCaptureButton() {
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.84)) {
+            if isListening {
+                isListening = false
+                capturePhase = .questioning
+                questionIndex = 0
+            } else {
+                isListening = true
+                capturePhase = .listening
+            }
+        }
+    }
+
+    private func answerCurrentQuestion() {
+        withAnimation(.easeOut(duration: 0.18)) {
+            if questionIndex < productionQuestions.count - 1 {
+                questionIndex += 1
+            } else {
+                capturePhase = .generated
+            }
+        }
+    }
+
+    private func resetCaptureDemo() {
+        isListening = false
+        questionIndex = 0
+        capturePhase = .ready
     }
 
     private var privacySection: some View {
@@ -345,7 +440,13 @@ private struct PrivacyLevelButton: View {
 // MARK: - Creation
 
 private struct CreationDemoView: View {
+    @EnvironmentObject private var appStore: AppStore
     @State private var selectedFilter: ProjectFilter = .all
+    @State private var isCreatingProject = false
+
+    private var filteredProjects: [CreatorProject] {
+        appStore.projects.filter { selectedFilter.includes($0.stage) }
+    }
 
     var body: some View {
         DemoPageBackground {
@@ -353,9 +454,7 @@ private struct CreationDemoView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     filterPicker
 
-                    ActiveCreationCard()
-
-                    otherProjectsSection
+                    projectsSection
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 30)
@@ -366,12 +465,16 @@ private struct CreationDemoView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
+                    isCreatingProject = true
                 } label: {
                     Image(systemName: "plus")
                         .foregroundStyle(.white)
                 }
                 .accessibilityLabel("新建创作")
             }
+        }
+        .navigationDestination(isPresented: $isCreatingProject) {
+            NewProjectView()
         }
     }
 
@@ -388,111 +491,34 @@ private struct CreationDemoView: View {
         .pickerStyle(.segmented)
     }
 
-    private var otherProjectsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(
-                title: "其他项目",
-                detail: "管理"
+    @ViewBuilder
+    private var projectsSection: some View {
+        if filteredProjects.isEmpty {
+            ContentUnavailableView(
+                "暂无项目",
+                systemImage: "square.stack.3d.up.slash",
+                description: Text("新建项目后，PAWN 会在这里持续维护创作状态。")
             )
-
-            ProjectRow(
-                title: "现场收音设备横评",
-                detail: "等待确认标题",
-                progress: 0.45
-            )
-
-            ProjectRow(
-                title: "新手创作者如何找选题",
-                detail: "提词稿已完成",
-                progress: 1
-            )
-        }
-    }
-}
-
-private struct ActiveCreationCard: View {
-    var body: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 18) {
-                HStack {
-                    Label(
-                        "正在创作",
-                        systemImage: "wand.and.stars"
-                    )
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.white)
-
-                    Spacer()
-
-                    Text("72%")
-                        .font(
-                            .caption
-                                .monospacedDigit()
-                                .weight(.semibold)
-                        )
-                        .foregroundStyle(.secondary)
-                }
-
-                Text("无屏创作的一天")
-                    .font(.title2.bold())
-
-                Text(
-                    "PAWN 已根据 4 轮对话生成视频结构，你可以继续完善分镜和提词稿。"
+        } else {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeader(
+                    title: "项目",
+                    detail: "\(filteredProjects.count) 个"
                 )
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .lineSpacing(3)
 
-                ProgressView(value: 0.72)
-                    .tint(.white)
-
-                HStack(spacing: 8) {
-                    ResultChip(
-                        title: "大纲",
-                        symbol: "list.bullet",
-                        isReady: true
-                    )
-
-                    ResultChip(
-                        title: "分镜",
-                        symbol: "rectangle.split.3x1",
-                        isReady: true
-                    )
-
-                    ResultChip(
-                        title: "提词稿",
-                        symbol: "text.quote",
-                        isReady: false
-                    )
+                ForEach(filteredProjects) { project in
+                    ProjectRow(project: project) {
+                        appStore.advance(project.id)
+                    }
                 }
-
-                Button {
-                } label: {
-                    Label(
-                        "继续创作",
-                        systemImage: "arrow.right"
-                    )
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 13)
-                    .background(
-                        Color.white,
-                        in: RoundedRectangle(
-                            cornerRadius: 12,
-                            style: .continuous
-                        )
-                    )
-                }
-                .buttonStyle(PressableButtonStyle())
             }
         }
     }
 }
 
-// MARK: - Collaboration
+// MARK: - PAWN Workspace
 
-private struct CollaborationDemoView: View {
+struct PawnWorkspaceView: View {
     @State private var draftReply = ""
 
     @State private var messages: [DemoMessage] = [
@@ -518,7 +544,7 @@ private struct CollaborationDemoView: View {
                 composer
             }
         }
-        .navigationTitle("协作")
+        .navigationTitle("PAWN 工作区")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
@@ -623,7 +649,6 @@ private struct CollaborationDemoView: View {
 
 private struct ProfileDemoView: View {
     @State private var localEncryptionEnabled = true
-    @State private var chainProofEnabled = true
 
     var body: some View {
         DemoPageBackground {
@@ -702,18 +727,23 @@ private struct ProfileDemoView: View {
             }
             .tint(.blue)
 
-            Toggle(isOn: $chainProofEnabled) {
+            NavigationLink {
+                ContentUnavailableView(
+                    "暂无商业凭证",
+                    systemImage: "checkmark.seal",
+                    description: Text("作品提交并完成链上结算后，可在这里查看对应版本的公开凭证。")
+                )
+            } label: {
                 Label(
-                    "链上授权证明",
+                    "商业任务凭证",
                     systemImage: "checkmark.seal.fill"
                 )
             }
-            .tint(.blue)
         } header: {
             Text("记忆与授权")
         } footer: {
             Text(
-                "原始内容只保存在本地，链上仅写入内容哈希和授权状态。"
+                "原始内容只保存在本地；链上只记录商业任务的版本摘要、授权和结算状态。"
             )
         }
     }
@@ -736,7 +766,7 @@ private enum AppTab: Hashable {
             return "创作"
 
         case .collaboration:
-            return "协作"
+            return "PAWN"
 
         case .profile:
             return "我的"
@@ -938,20 +968,40 @@ private struct ResultChip: View {
     }
 }
 
+private struct ResultLine: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            Text(value)
+                .font(.subheadline)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
 private struct ProjectRow: View {
-    let title: String
-    let detail: String
-    let progress: Double
+    let project: CreatorProject
+    let advance: () -> Void
+
+    private var progress: Double {
+        project.stage.progress
+    }
 
     var body: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     VStack(alignment: .leading, spacing: 5) {
-                        Text(title)
+                        Text(project.name)
                             .font(.subheadline.weight(.semibold))
 
-                        Text(detail)
+                        Text(project.stage.title)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -977,6 +1027,26 @@ private struct ProjectRow: View {
                             ? Color.green
                             : Color.white
                     )
+
+                HStack {
+                    Label(
+                        project.kind.title,
+                        systemImage: project.kind == .commercial
+                            ? "briefcase.fill"
+                            : "person.fill"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                    Spacer()
+
+                    if project.stage != .settled {
+                        Button(project.stage.actionTitle, action: advance)
+                            .font(.caption.weight(.semibold))
+                            .buttonStyle(.bordered)
+                            .tint(.white)
+                    }
+                }
             }
         }
     }
@@ -1096,9 +1166,21 @@ private struct DemoMessage: Identifiable {
     let isAgent: Bool
 }
 
+private enum CapturePhase {
+    case ready
+    case listening
+    case questioning
+    case generated
+}
+
+private struct ProductionQuestion {
+    let prompt: String
+    let answer: String
+}
+
 private enum PrivacyLevel: String, CaseIterable, Identifiable {
     case privateOnly
-    case authorized
+    case projectMembers
     case publicContent
 
     var id: Self {
@@ -1110,8 +1192,8 @@ private enum PrivacyLevel: String, CaseIterable, Identifiable {
         case .privateOnly:
             return "私密"
 
-        case .authorized:
-            return "授权"
+        case .projectMembers:
+            return "项目成员"
 
         case .publicContent:
             return "公开"
@@ -1123,8 +1205,8 @@ private enum PrivacyLevel: String, CaseIterable, Identifiable {
         case .privateOnly:
             return "lock.fill"
 
-        case .authorized:
-            return "person.badge.key.fill"
+        case .projectMembers:
+            return "person.2.fill"
 
         case .publicContent:
             return "globe.asia.australia.fill"
@@ -1153,8 +1235,20 @@ private enum ProjectFilter: String, CaseIterable, Identifiable {
             return "已完成"
         }
     }
+
+    func includes(_ stage: ProjectStage) -> Bool {
+        switch self {
+        case .all:
+            return true
+        case .creating:
+            return stage != .settled
+        case .completed:
+            return stage == .settled
+        }
+    }
 }
 
 #Preview {
     ContentView()
+        .environmentObject(AppStore())
 }
