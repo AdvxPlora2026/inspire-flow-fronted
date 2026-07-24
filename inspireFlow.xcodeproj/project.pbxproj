@@ -20,7 +20,26 @@
 			membershipExceptions = (
 				Agent.md,
 				MVP.md,
+				"MVP 2.md",
 				newIDEA.md,
+				"RingSDK/pawn_demo.py",
+				"RingSDK/protocol.md",
+				"RingSDK/README.md",
+				"RingSDK/ring_sound_use.md",
+				"RingSDK/ring_sound.py",
+				"skills/skills/.gitignore",
+				"skills/skills/LICENSE",
+				"skills/skills/README.md",
+				"skills/skills/skills/animation-vocabulary/SKILL.md",
+				"skills/skills/skills/apple-design/SKILL.md",
+				"skills/skills/skills/emil-design-eng/SKILL.md",
+				"skills/skills/skills/find-animation-opportunities/SKILL.md",
+				"skills/skills/skills/improve-animations/AUDIT.md",
+				"skills/skills/skills/improve-animations/PLAN-TEMPLATE.md",
+				"skills/skills/skills/improve-animations/SKILL.md",
+				"skills/skills/skills/pick-ui-library/SKILL.md",
+				"skills/skills/skills/review-animations/SKILL.md",
+				"skills/skills/skills/review-animations/STANDARDS.md",
 			);
 			target = B9D36BC53011E5B200A39BA2 /* inspireFlow */;
 		};
@@ -32,7 +51,7 @@
 			exceptions = (
 				B9D36C083011FC3F00A39BA2 /* Exceptions for "inspireFlow（升变PAWN）" folder in "inspireFlow" target */,
 			);
-			path = "inspireFlow（升变PAWN）";
+			path = "inspireFlow（升变）";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */

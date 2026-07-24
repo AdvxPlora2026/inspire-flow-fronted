@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CreatorProjectsView: View {
     @EnvironmentObject private var appStore: AppStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isCreatingProject = false
 
     var body: some View {
@@ -13,14 +14,10 @@ struct CreatorProjectsView: View {
                     } description: {
                         Text("新建项目后，PAWN 会在这里持续维护创作状态。")
                     } actions: {
-                        Button {
+                        ShengbianPrimaryButton(title: "新建项目", symbol: "plus") {
                             isCreatingProject = true
-                        } label: {
-                            Text("新建项目")
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.white)
-                        .foregroundStyle(.black)
+                        .padding(.horizontal, ShengbianMetrics.pageMargin)
                     }
                 } else {
                     ScrollView {
@@ -34,7 +31,11 @@ struct CreatorProjectsView: View {
                                 .buttonStyle(.plain)
                             }
                         }
-                        .padding(.horizontal, 20)
+                        .animation(
+                            ShengbianMotion.maybe(.snappySpring, reduceMotion),
+                            value: appStore.projects.count
+                        )
+                        .padding(.horizontal, ShengbianMetrics.pageMargin)
                         .padding(.bottom, 32)
                     }
                 }

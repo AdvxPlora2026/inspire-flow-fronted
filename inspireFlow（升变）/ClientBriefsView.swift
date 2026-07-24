@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ClientBriefsView: View {
     @EnvironmentObject private var appStore: AppStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isCreatingBrief = false
 
     private var projects: [CreatorProject] {
@@ -17,14 +18,10 @@ struct ClientBriefsView: View {
                     } description: {
                         Text("发布创作需求后，委托会出现在这里。")
                     } actions: {
-                        Button {
+                        ShengbianPrimaryButton(title: "发布委托", symbol: "plus") {
                             isCreatingBrief = true
-                        } label: {
-                            Text("发布委托")
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.white)
-                        .foregroundStyle(.black)
+                        .padding(.horizontal, ShengbianMetrics.pageMargin)
                     }
                 } else {
                     ScrollView {
@@ -38,6 +35,10 @@ struct ClientBriefsView: View {
                                 .buttonStyle(.plain)
                             }
                         }
+                        .animation(
+                            ShengbianMotion.maybe(.snappySpring, reduceMotion),
+                            value: projects.count
+                        )
                         .padding(.horizontal, ShengbianMetrics.pageMargin)
                         .padding(.bottom, 32)
                     }

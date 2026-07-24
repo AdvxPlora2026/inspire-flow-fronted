@@ -2,8 +2,10 @@ import SwiftUI
 
 struct ProjectDetailView: View {
     @EnvironmentObject private var appStore: AppStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let projectID: UUID
+    @State private var isCapturing = false
 
     private var project: CreatorProject? {
         appStore.projects.first { $0.id == projectID }
@@ -63,7 +65,7 @@ struct ProjectDetailView: View {
 
             if project.stage != .settled {
                 Button {
-                    appStore.advance(project.id)
+                    advanceStage(project)
                 } label: {
                     HStack(spacing: 10) {
                         Text(project.stage.actionTitle)
@@ -80,7 +82,7 @@ struct ProjectDetailView: View {
                         in: RoundedRectangle(cornerRadius: ShengbianMetrics.controlRadius, style: .continuous)
                     )
                 }
-                .buttonStyle(.plain)
+                .shengbianPressable(reduceMotion: reduceMotion)
                 .accessibilityHint("将项目推进到下一阶段")
             } else {
                 Label("项目已完成", systemImage: "checkmark.circle.fill")
@@ -94,6 +96,17 @@ struct ProjectDetailView: View {
             }
         }
         .padding(.top, 12)
+    }
+
+    private func advanceStage(_ project: CreatorProject) {
+        let reachesSettled = project.stage == .approved
+        withAnimation(ShengbianMotion.maybe(.standardSpring, reduceMotion)) {
+            appStore.advance(project.id)
+        }
+        if reachesSettled {
+            Haptics.impact(.rigid)
+        }
+        Haptics.success()
     }
 
     private func progressSection(_ project: CreatorProject) -> some View {
@@ -137,6 +150,8 @@ struct ProjectDetailView: View {
                         ? ShengbianColors.primaryText
                         : ShengbianColors.tertiaryText
                 )
+                .symbolEffect(.bounce, value: currentIndex)
+                .contentTransition(.symbolEffect(.replace))
 
             Text(stage.title)
                 .font(.system(size: 9, weight: isCurrent ? .semibold : .regular))
@@ -271,8 +286,6 @@ struct ProjectDetailView: View {
             .padding(.vertical, 4)
         }
     }
-
-    @State private var isCapturing = false
 
     private func capturesSection(_ project: CreatorProject) -> some View {
         VStack(alignment: .leading, spacing: 12) {

@@ -16,6 +16,7 @@ struct InspirationRecordView: View {
     @State private var privacy: InspirationPrivacy = .privateOnly
     @State private var timer: Timer?
     @State private var savedCapture: InspirationCapture?
+    @State private var pulse = false
 
     private let questions = [
         "这条视频最想讲给谁看？",
@@ -41,15 +42,20 @@ struct InspirationRecordView: View {
                         switch phase {
                         case .ready:
                             readySection
+                                .transition(sectionTransition)
                         case .recording:
                             recordingSection
+                                .transition(sectionTransition)
                         case .questioning:
                             questioningSection
+                                .transition(sectionTransition)
                         case .generating:
                             generatingSection
+                                .transition(sectionTransition)
                         case .done:
                             if let capture = savedCapture {
                                 doneSection(capture)
+                                    .transition(sectionTransition)
                             }
                         }
                     }
@@ -65,6 +71,11 @@ struct InspirationRecordView: View {
         .preferredColorScheme(.dark)
         .onDisappear { stopTimer() }
         .onReceive(ring.captureSignal) { handleCaptureToggle() }
+    }
+
+    private var sectionTransition: AnyTransition {
+        if reduceMotion { return .opacity }
+        return .opacity.combined(with: .move(edge: .bottom))
     }
 
     // MARK: - Toolbar
@@ -398,11 +409,14 @@ struct InspirationRecordView: View {
                                 lineWidth: 1
                             )
                             .frame(width: 140 * scale, height: 140 * scale)
+                            .scaleEffect(isListening && pulse && !reduceMotion ? 1.08 : 1)
+                            .opacity(isListening && pulse && !reduceMotion ? 0.55 : 1)
                     }
 
                     Image(systemName: isListening ? "stop.fill" : "mic.fill")
                         .font(.system(size: 22, weight: .semibold))
                         .foregroundStyle(isListening ? ShengbianColors.listening : ShengbianColors.inverseText)
+                        .contentTransition(.symbolEffect(.replace))
                         .frame(width: 64, height: 64)
                         .background(
                             isListening ? ShengbianColors.listening.opacity(0.18) : ShengbianColors.primaryAction,
@@ -410,6 +424,10 @@ struct InspirationRecordView: View {
                         )
                 }
                 .frame(height: 140)
+                .animation(
+                    reduceMotion ? nil : ShengbianMotion.pulse.repeatForever(autoreverses: true),
+                    value: pulse
+                )
                 .accessibilityHidden(true)
 
                 Text(isListening ? "轻点停止录制" : "轻点开始说话")
@@ -482,9 +500,11 @@ struct InspirationRecordView: View {
     }
 
     private func startRecording() {
+        Haptics.impact(.medium)
         withAnimation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.84)) {
             phase = .recording
         }
+        pulse = true
         elapsed = 0
         simulateTranscription()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
@@ -496,6 +516,8 @@ struct InspirationRecordView: View {
 
     private func stopRecording() {
         stopTimer()
+        pulse = false
+        Haptics.impact(.rigid)
         withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
             phase = .questioning
             questionIndex = 0
@@ -519,6 +541,7 @@ struct InspirationRecordView: View {
     }
 
     private func submitAnswer(_ answer: String) {
+        Haptics.selection()
         withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
             answers.append(answer)
             if questionIndex < questions.count - 1 {
@@ -556,6 +579,7 @@ struct InspirationRecordView: View {
             savedCapture = capture
             phase = .done
         }
+        Haptics.success()
     }
 
     private func stopTimer() {

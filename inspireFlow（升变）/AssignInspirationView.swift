@@ -3,6 +3,7 @@ import SwiftUI
 struct AssignInspirationView: View {
     @EnvironmentObject private var appStore: AppStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let inspirationID: UUID
 
@@ -91,12 +92,17 @@ struct AssignInspirationView: View {
         let isSelected = selectedProjectID == project.id
 
         return Button {
-            selectedProjectID = isSelected ? nil : project.id
+            Haptics.selection()
+            withAnimation(ShengbianMotion.maybe(.snappySpring, reduceMotion)) {
+                selectedProjectID = isSelected ? nil : project.id
+            }
         } label: {
             HStack(spacing: 14) {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
                     .foregroundStyle(isSelected ? ShengbianColors.primaryText : ShengbianColors.tertiaryText)
+                    .contentTransition(.symbolEffect(.replace))
+                    .symbolEffect(.bounce, value: isSelected)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(project.name)
@@ -125,7 +131,7 @@ struct AssignInspirationView: View {
                     )
             }
         }
-        .buttonStyle(.plain)
+        .shengbianPressable(reduceMotion: reduceMotion)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 
@@ -168,6 +174,7 @@ struct AssignInspirationView: View {
                 Button {
                     if let projectID = selectedProjectID {
                         appStore.assignInspiration(inspirationID, toProject: projectID)
+                        Haptics.success()
                     }
                     dismiss()
                 } label: {
@@ -175,14 +182,14 @@ struct AssignInspirationView: View {
                         .font(ShengbianTypography.headline)
                         .foregroundStyle(ShengbianColors.inverseText)
                         .padding(.horizontal, 24)
-                        .frame(height: 46)
+                        .frame(height: ShengbianMetrics.minimumControlHeight)
                         .background(
                             selectedProjectID != nil ? ShengbianColors.primaryAction : ShengbianColors.primaryAction.opacity(0.35),
                             in: RoundedRectangle(cornerRadius: ShengbianMetrics.controlRadius, style: .continuous)
                         )
                 }
                 .disabled(selectedProjectID == nil)
-                .buttonStyle(.plain)
+                .shengbianPressable(reduceMotion: reduceMotion)
             }
             .padding(.horizontal, ShengbianMetrics.pageMargin)
             .padding(.vertical, 14)

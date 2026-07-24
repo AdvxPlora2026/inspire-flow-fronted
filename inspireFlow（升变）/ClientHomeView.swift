@@ -3,6 +3,7 @@ import SwiftUI
 struct ClientHomeView: View {
     @EnvironmentObject private var appStore: AppStore
     @EnvironmentObject private var session: AppSession
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isCreatingBrief = false
 
     private var commercialProjects: [CreatorProject] {
@@ -20,18 +21,10 @@ struct ClientHomeView: View {
                             .shengbianBodyText(secondary: true)
                     }
 
-                    Button { isCreatingBrief = true } label: {
-                        Label("发布新的创作需求", systemImage: "plus")
-                            .font(ShengbianTypography.headline)
-                            .foregroundStyle(ShengbianColors.inverseText)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: ShengbianMetrics.minimumControlHeight)
-                            .background(
-                                ShengbianColors.primaryAction,
-                                in: RoundedRectangle(cornerRadius: ShengbianMetrics.controlRadius, style: .continuous)
-                            )
+                    ShengbianPrimaryButton(title: "发布新的创作需求", symbol: "plus") {
+                        Haptics.impact(.light)
+                        isCreatingBrief = true
                     }
-                    .buttonStyle(.plain)
 
                     metrics
 
@@ -53,6 +46,7 @@ struct ClientHomeView: View {
                                 }
                                 .buttonStyle(.plain)
                             }
+                            .animation(ShengbianMotion.maybe(.snappySpring, reduceMotion), value: commercialProjects.count)
                         }
                     }
                 }

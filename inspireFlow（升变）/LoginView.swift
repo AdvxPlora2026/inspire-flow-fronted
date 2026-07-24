@@ -56,6 +56,7 @@ struct LoginView: View {
             HStack(spacing: 10) {
                 ForEach(UserRole.allCases) { role in
                     Button {
+                        Haptics.selection()
                         withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
                             selectedRole = role
                         }
@@ -63,6 +64,7 @@ struct LoginView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Image(systemName: role.symbol)
                                 .font(.title3.weight(.semibold))
+                                .symbolEffect(.bounce, value: selectedRole == role)
 
                             Text(role.title)
                                 .font(ShengbianTypography.headline)
@@ -149,14 +151,20 @@ struct LoginView: View {
     }
 
     private func submit() {
-        hasAttemptedSubmit = true
-        guard isValid else { return }
+        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) {
+            hasAttemptedSubmit = true
+        }
+        guard isValid else {
+            Haptics.error()
+            return
+        }
         focusedField = nil
         if isCreatingAccount {
             session.register(email: email, role: selectedRole)
         } else {
             session.signIn(email: email, role: selectedRole)
         }
+        Haptics.success()
     }
 
     private enum Field {

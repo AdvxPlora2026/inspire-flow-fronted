@@ -3,6 +3,7 @@ import SwiftUI
 struct InspirationDetailView: View {
     @EnvironmentObject private var appStore: AppStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let inspirationID: UUID
 
@@ -153,7 +154,7 @@ struct InspirationDetailView: View {
                     in: RoundedRectangle(cornerRadius: ShengbianMetrics.controlRadius, style: .continuous)
                 )
             }
-            .buttonStyle(.plain)
+            .shengbianPressable(reduceMotion: reduceMotion)
         }
     }
 
@@ -188,6 +189,7 @@ struct InspirationDetailView: View {
                 }
             } else {
                 Button {
+                    Haptics.selection()
                     isAssigning = true
                 } label: {
                     HStack(spacing: 10) {
@@ -209,7 +211,7 @@ struct InspirationDetailView: View {
                             .strokeBorder(ShengbianColors.glassBorder)
                     }
                 }
-                .buttonStyle(.plain)
+                .shengbianPressable(reduceMotion: reduceMotion)
             }
         }
     }
@@ -218,6 +220,7 @@ struct InspirationDetailView: View {
         VStack(spacing: 10) {
             if inspiration.projectID != nil {
                 Button {
+                    Haptics.selection()
                     isAssigning = true
                 } label: {
                     Label("更换所属项目", systemImage: "arrow.triangle.2.circlepath")

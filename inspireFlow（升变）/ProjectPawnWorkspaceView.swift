@@ -72,6 +72,11 @@ struct ProjectPawnWorkspaceView: View {
                         ForEach(conversation.messages) { message in
                             ProjectPawnMessageBubble(message: message)
                                 .id(message.id)
+                                .transition(
+                                    reduceMotion
+                                        ? .opacity
+                                        : .move(edge: .bottom).combined(with: .opacity)
+                                )
                         }
 
                         if !conversation.attachments.isEmpty {
@@ -79,6 +84,10 @@ struct ProjectPawnWorkspaceView: View {
                         }
                     }
                 }
+                .animation(
+                    ShengbianMotion.maybe(.gentle, reduceMotion),
+                    value: conversation?.messages.count
+                )
                 .padding(.horizontal, ShengbianMetrics.pageMargin)
                 .padding(.bottom, 18)
             }
@@ -247,6 +256,7 @@ struct ProjectPawnWorkspaceView: View {
 
         appStore.sendCreatorMessage(content, projectID: project.id)
         draft = ""
+        Haptics.impact(.light)
         generateResponse(project: project, prompt: content)
     }
 
@@ -266,6 +276,7 @@ struct ProjectPawnWorkspaceView: View {
         if reduceMotion {
             appStore.updatePawnMessage(messageID, text: response, isComplete: true, projectID: project.id)
             generatingMessageID = nil
+            Haptics.success()
             return
         }
 
@@ -285,10 +296,17 @@ struct ProjectPawnWorkspaceView: View {
             appStore.updatePawnMessage(messageID, text: response, isComplete: true, projectID: project.id)
             generatingMessageID = nil
             generationTask = nil
+            Haptics.success()
         }
     }
 
     private func stopGeneration() {
+        guard generatingMessageID != nil else {
+            generationTask?.cancel()
+            generationTask = nil
+            return
+        }
+        Haptics.impact(.rigid)
         generationTask?.cancel()
         generationTask = nil
 
@@ -305,8 +323,10 @@ struct ProjectPawnWorkspaceView: View {
         case .success(let urls):
             guard let url = urls.first else { return }
             appStore.addAttachment(displayName: url.lastPathComponent, projectID: projectID)
+            Haptics.selection()
         case .failure(let error):
             importError = error.localizedDescription
+            Haptics.error()
         }
     }
 }

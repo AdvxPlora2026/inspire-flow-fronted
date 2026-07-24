@@ -2,21 +2,12 @@ import SwiftUI
 
 struct ClientMessagesView: View {
     var body: some View {
-        AppBackground {
-            List {
-                Label {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("PAWN Creator")
-                        Text("初版大纲已提交，请查看本次更新。")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                } icon: {
-                    Image(systemName: "person.crop.circle.fill")
-                        .font(.title2)
-                }
+        ShengbianBackground {
+            ContentUnavailableView {
+                Label("还没有消息", systemImage: "bubble.left.and.bubble.right")
+            } description: {
+                Text("与创作者的沟通、方案更新会出现在这里。")
             }
-            .scrollContentBackground(.hidden)
         }
         .navigationTitle("消息")
     }

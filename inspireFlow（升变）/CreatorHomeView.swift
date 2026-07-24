@@ -3,8 +3,10 @@ import SwiftUI
 struct CreatorHomeView: View {
     @EnvironmentObject private var appStore: AppStore
     @EnvironmentObject private var session: AppSession
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isCreatingProject = false
     @State private var isCapturing = false
+    @State private var selectedTool: CreatorTool?
 
     var body: some View {
         ShengbianBackground {
@@ -36,6 +38,9 @@ struct CreatorHomeView: View {
         .sheet(isPresented: $isCapturing) {
             InspirationRecordView()
         }
+        .sheet(item: $selectedTool) { tool in
+            CreatorToolSheet(tool: tool)
+        }
     }
 
     private var greeting: some View {
@@ -52,6 +57,7 @@ struct CreatorHomeView: View {
 
     private var captureAction: some View {
         Button {
+            Haptics.impact(.medium)
             isCapturing = true
         } label: {
             VStack(spacing: 20) {
@@ -97,7 +103,7 @@ struct CreatorHomeView: View {
             .accessibilityLabel("捕捉灵感，PAWN 已准备好")
             .accessibilityHint("轻点屏幕开始说话，也可双击 Zilo 戒指")
         }
-        .buttonStyle(.plain)
+        .shengbianPressable(reduceMotion: reduceMotion)
     }
 
     private struct CaptureSignalMark: View {
@@ -168,6 +174,7 @@ struct CreatorHomeView: View {
                     }
                     .buttonStyle(.plain)
                 }
+                .animation(ShengbianMotion.maybe(.snappySpring, reduceMotion), value: appStore.inspirations.count)
             }
         }
     }
@@ -227,25 +234,28 @@ struct CreatorHomeView: View {
 
             ViewThatFits {
                 HStack(spacing: 10) {
-                    quickAction("提词拍摄", symbol: "text.viewfinder")
-                    quickAction("导出材料", symbol: "square.and.arrow.up")
-                    quickAction("设备", symbol: "dot.radiowaves.left.and.right")
+                    ForEach(CreatorTool.allCases) { tool in
+                        quickAction(tool)
+                    }
                 }
 
                 VStack(spacing: 10) {
-                    quickAction("提词拍摄", symbol: "text.viewfinder")
-                    quickAction("导出材料", symbol: "square.and.arrow.up")
-                    quickAction("设备", symbol: "dot.radiowaves.left.and.right")
+                    ForEach(CreatorTool.allCases) { tool in
+                        quickAction(tool)
+                    }
                 }
             }
         }
     }
 
-    private func quickAction(_ title: String, symbol: String) -> some View {
-        Button {} label: {
+    private func quickAction(_ tool: CreatorTool) -> some View {
+        Button {
+            Haptics.selection()
+            selectedTool = tool
+        } label: {
             VStack(spacing: 9) {
-                Image(systemName: symbol).font(.headline)
-                Text(title).font(.caption.weight(.semibold))
+                Image(systemName: tool.symbol).font(.headline)
+                Text(tool.title).font(.caption.weight(.semibold))
             }
             .frame(maxWidth: .infinity, minHeight: 76)
             .background(.thinMaterial, in: RoundedRectangle(cornerRadius: ShengbianMetrics.controlRadius, style: .continuous))
@@ -255,6 +265,74 @@ struct CreatorHomeView: View {
                     .strokeBorder(ShengbianColors.glassBorder)
             }
         }
-        .buttonStyle(.plain)
+        .shengbianPressable(reduceMotion: reduceMotion)
+    }
+}
+
+private enum CreatorTool: String, CaseIterable, Identifiable {
+    case teleprompter, export, device
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .teleprompter: "提词拍摄"
+        case .export: "导出材料"
+        case .device: "设备"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .teleprompter: "text.viewfinder"
+        case .export: "square.and.arrow.up"
+        case .device: "dot.radiowaves.left.and.right"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .teleprompter: "进入低干扰全屏提词模式，边看稿边拍摄。"
+        case .export: "把创作方案与素材整理导出，方便交付或备份。"
+        case .device: "连接并管理 Zilo 戒指等外设，随手双击即可捕捉灵感。"
+        }
+    }
+}
+
+private struct CreatorToolSheet: View {
+    let tool: CreatorTool
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ShengbianBackground {
+            VStack(alignment: .leading, spacing: 20) {
+                Image(systemName: tool.symbol)
+                    .font(.system(size: 26, weight: .semibold))
+                    .foregroundStyle(ShengbianColors.inverseText)
+                    .frame(width: 60, height: 60)
+                    .background(ShengbianColors.primaryAction, in: RoundedRectangle(cornerRadius: ShengbianMetrics.controlRadius, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(tool.title)
+                        .font(ShengbianTypography.title2)
+                    Text(tool.detail)
+                        .font(ShengbianTypography.subheadline)
+                        .foregroundStyle(ShengbianColors.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Label("即将上线", systemImage: "hammer")
+                    .font(ShengbianTypography.caption)
+                    .foregroundStyle(ShengbianColors.tertiaryText)
+
+                Spacer()
+
+                ShengbianPrimaryButton(title: "知道了", symbol: "checkmark") {
+                    dismiss()
+                }
+            }
+            .padding(ShengbianMetrics.pageMargin)
+        }
+        .presentationDetents([.medium])
     }
 }

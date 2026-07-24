@@ -241,7 +241,7 @@ struct ShengbianSectionHeader: View {
     }
 }
 
-private struct ShengbianPressStyle: ButtonStyle {
+struct ShengbianPressStyle: ButtonStyle {
     let reduceMotion: Bool
 
     func makeBody(configuration: Configuration) -> some View {
@@ -252,5 +252,13 @@ private struct ShengbianPressStyle: ButtonStyle {
                 reduceMotion ? nil : .easeOut(duration: 0.12),
                 value: configuration.isPressed
             )
+    }
+}
+
+extension View {
+    /// Applies the shared press feedback (scale + opacity) used by the
+    /// Shengbian primary/icon buttons to any custom `Button`.
+    func shengbianPressable(reduceMotion: Bool) -> some View {
+        buttonStyle(ShengbianPressStyle(reduceMotion: reduceMotion))
     }
 }

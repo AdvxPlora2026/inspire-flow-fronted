@@ -23,6 +23,7 @@ struct CreatorMainView: View {
         }
         .tint(.white)
         .preferredColorScheme(.dark)
+        .sensoryFeedback(.selection, trigger: selectedTab)
     }
 
     private enum CreatorTab: Hashable {
