@@ -55,7 +55,7 @@ struct ClientHomeView: View {
                 .padding(.bottom, 32)
             }
         }
-        .navigationTitle("inspireFlow")
+        .navigationTitle(session.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(isPresented: $isCreatingBrief) { ClientCreateBriefView() }
     }

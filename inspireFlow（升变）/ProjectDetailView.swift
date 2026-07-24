@@ -2,10 +2,11 @@ import SwiftUI
 
 struct ProjectDetailView: View {
     @EnvironmentObject private var appStore: AppStore
+    @EnvironmentObject private var session: AppSession
+    @EnvironmentObject private var ring: RingManager
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let projectID: UUID
-    @State private var isCapturing = false
 
     private var project: CreatorProject? {
         appStore.projects.first { $0.id == projectID }
@@ -22,6 +23,9 @@ struct ProjectDetailView: View {
                     VStack(alignment: .leading, spacing: 28) {
                         projectHeader(project)
                         progressSection(project)
+                        if project.kind == .commercial {
+                            chainSection
+                        }
                         goalSection(project)
                         capturesSection(project)
                         artifactSection(project)
@@ -63,7 +67,16 @@ struct ProjectDetailView: View {
                 .font(ShengbianTypography.display)
                 .fixedSize(horizontal: false, vertical: true)
 
-            if project.stage != .settled {
+            if project.kind == .commercial && !session.isDemoMode {
+                Label("云端商业任务状态待接入", systemImage: "cloud")
+                    .font(ShengbianTypography.headline)
+                    .foregroundStyle(ShengbianColors.secondaryText)
+                    .frame(maxWidth: .infinity, minHeight: ShengbianMetrics.minimumControlHeight)
+                    .background(
+                        ShengbianColors.glassTintStrong,
+                        in: RoundedRectangle(cornerRadius: ShengbianMetrics.controlRadius, style: .continuous)
+                    )
+            } else if project.stage != .settled {
                 Button {
                     advanceStage(project)
                 } label: {
@@ -136,6 +149,44 @@ struct ProjectDetailView: View {
                     .strokeBorder(ShengbianColors.glassBorder)
             }
         }
+    }
+
+    private var chainSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ShengbianSectionHeader(title: "Injective 商业凭证", detail: "链上")
+
+            ShengbianGlassCard(emphasis: .prominent) {
+                VStack(alignment: .leading, spacing: 16) {
+                    Label("商业任务链路已由后端提供", systemImage: "checkmark.seal.fill")
+                        .font(ShengbianTypography.bodyEmphasized)
+
+                    HStack(spacing: 0) {
+                        chainStep("预算托管", symbol: "lock.shield")
+                        chainStep("作品存证", symbol: "doc.badge.ellipsis")
+                        chainStep("授权确认", symbol: "signature")
+                        chainStep("自动结算", symbol: "arrow.triangle.branch")
+                    }
+
+                    Text("当前 App 尚未绑定商业任务 ID，因此不会显示交易哈希或声称已经上链。完成接口接入后，这里将展示网络、交易状态与区块浏览器链接。")
+                        .font(ShengbianTypography.caption)
+                        .foregroundStyle(ShengbianColors.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    private func chainStep(_ title: String, symbol: String) -> some View {
+        VStack(spacing: 7) {
+            Image(systemName: symbol)
+                .font(.caption.weight(.semibold))
+            Text(title)
+                .font(.system(size: 9, weight: .medium))
+                .multilineTextAlignment(.center)
+        }
+        .foregroundStyle(ShengbianColors.secondaryText)
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
     }
 
     private func stageMarker(_ stage: ProjectStage, index: Int, currentIndex: Int) -> some View {
@@ -302,7 +353,7 @@ struct ProjectDetailView: View {
                             .foregroundStyle(ShengbianColors.secondaryText)
 
                         Button {
-                            isCapturing = true
+                            ring.isCapturePresented = true
                         } label: {
                             Label("现在捕捉", systemImage: "mic.fill")
                                 .font(ShengbianTypography.caption)
@@ -317,7 +368,7 @@ struct ProjectDetailView: View {
                         .buttonStyle(.plain)
                     }
                 }
-                .sheet(isPresented: $isCapturing) {
+                .sheet(isPresented: $ring.isCapturePresented) {
                     InspirationRecordView(projectID: project.id)
                 }
             } else {
@@ -424,27 +475,116 @@ private enum ProjectArtifactKind: String, CaseIterable, Identifiable {
         case .teleprompter: "text.viewfinder"
         }
     }
+
+    func content(from pack: BilibiliPack) -> String {
+        switch self {
+        case .outline: pack.outline
+        case .storyboard: pack.shotList
+        case .script: "\(pack.hook)\n\n\(pack.outline)"
+        case .teleprompter: "\(pack.hook)\n\n\(pack.outline)\n\n\(pack.shotList)"
+        }
+    }
+
+    func pawnPrompt(for project: CreatorProject) -> String {
+        switch self {
+        case .outline:
+            "请为《\(project.name)》生成可直接编辑的视频大纲，包含开场钩子、章节顺序和每段目标。"
+        case .storyboard:
+            "请为《\(project.name)》生成可拍摄的分镜清单，逐镜写出画面、台词、时长和拍摄提示。"
+        case .script:
+            "请为《\(project.name)》生成可直接朗读的提词稿，保留自然口语节奏和段落停顿。"
+        case .teleprompter:
+            "请为《\(project.name)》整理一份适合提词拍摄的完整口播稿。"
+        }
+    }
 }
 
 private struct ProjectArtifactView: View {
+    @EnvironmentObject private var appStore: AppStore
     let project: CreatorProject
     let artifact: ProjectArtifactKind
 
+    private var packs: [BilibiliPack] {
+        appStore.inspirations
+            .filter { $0.projectID == project.id }
+            .compactMap(\.bilibiliPack)
+            .filter { !artifact.content(from: $0).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+
     var body: some View {
         ShengbianBackground {
-            ContentUnavailableView {
-                Label(artifact.title, systemImage: artifact.symbol)
-            } description: {
-                Text("“\(project.name)”还没有这项内容。")
-            } actions: {
-                NavigationLink {
-                    ProjectPawnWorkspaceView(projectID: project.id)
-                } label: {
-                    Text("交给 PAWN 开始")
+            Group {
+                if packs.isEmpty {
+                    ContentUnavailableView {
+                        Label(artifact.title, systemImage: artifact.symbol)
+                    } description: {
+                        Text("“\(project.name)”还没有这项内容。")
+                    } actions: {
+                        NavigationLink {
+                            ProjectPawnWorkspaceView(
+                                projectID: project.id,
+                                initialDraft: artifact.pawnPrompt(for: project)
+                            )
+                        } label: {
+                            Label("交给 PAWN 生成", systemImage: "sparkles")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.white)
+                        .foregroundStyle(.black)
+                    }
+                } else if artifact == .teleprompter {
+                    VStack(spacing: 18) {
+                        ShengbianGlassCard(emphasis: .prominent) {
+                            Label("已找到 \(packs.count) 份项目提词内容", systemImage: "text.viewfinder")
+                                .font(ShengbianTypography.bodyEmphasized)
+                        }
+
+                        NavigationLink {
+                            TeleprompterView(projectID: project.id)
+                        } label: {
+                            Label("进入全屏提词", systemImage: "play.fill")
+                                .font(ShengbianTypography.headline)
+                                .foregroundStyle(ShengbianColors.inverseText)
+                                .frame(maxWidth: .infinity, minHeight: ShengbianMetrics.minimumControlHeight)
+                                .background(ShengbianColors.primaryAction, in: RoundedRectangle(cornerRadius: ShengbianMetrics.controlRadius))
+                        }
+                        .buttonStyle(.plain)
+                        Spacer()
+                    }
+                    .padding(ShengbianMetrics.pageMargin)
+                } else {
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 12) {
+                            ForEach(Array(packs.enumerated()), id: \.offset) { index, pack in
+                                ShengbianGlassCard(emphasis: index == 0 ? .prominent : .standard) {
+                                    VStack(alignment: .leading, spacing: 10) {
+                                        Text(pack.title)
+                                            .font(ShengbianTypography.bodyEmphasized)
+                                        Text(artifact.content(from: pack))
+                                            .font(ShengbianTypography.body)
+                                            .foregroundStyle(ShengbianColors.secondaryText)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+                                }
+                            }
+
+                            NavigationLink {
+                                ProjectPawnWorkspaceView(
+                                    projectID: project.id,
+                                    initialDraft: "请继续优化《\(project.name)》的\(artifact.title)，并说明具体改动。"
+                                )
+                            } label: {
+                                Label("让 PAWN 继续优化", systemImage: "sparkles")
+                                    .font(ShengbianTypography.headline)
+                                    .foregroundStyle(ShengbianColors.inverseText)
+                                    .frame(maxWidth: .infinity, minHeight: ShengbianMetrics.minimumControlHeight)
+                                    .background(ShengbianColors.primaryAction, in: RoundedRectangle(cornerRadius: ShengbianMetrics.controlRadius))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(ShengbianMetrics.pageMargin)
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.white)
-                .foregroundStyle(.black)
             }
         }
         .navigationTitle(artifact.title)

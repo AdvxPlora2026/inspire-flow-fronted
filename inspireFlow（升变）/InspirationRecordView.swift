@@ -2,6 +2,7 @@ import SwiftUI
 
 struct InspirationRecordView: View {
     @EnvironmentObject private var appStore: AppStore
+    @EnvironmentObject private var session: AppSession
     @EnvironmentObject private var ring: RingManager
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -70,7 +71,7 @@ struct InspirationRecordView: View {
         }
         .preferredColorScheme(.dark)
         .onDisappear { stopTimer() }
-        .onReceive(ring.captureSignal) { handleCaptureToggle() }
+        .onReceive(ring.primaryActionSignal) { handleCaptureToggle() }
     }
 
     private var sectionTransition: AnyTransition {
@@ -460,12 +461,12 @@ struct InspirationRecordView: View {
             Divider().background(ShengbianColors.glassBorder)
 
             HStack {
-                Text("麦克风权限已获取（演示模式）")
+                Text("当前使用演示转录，未请求麦克风权限")
                     .font(ShengbianTypography.caption)
                     .foregroundStyle(ShengbianColors.tertiaryText)
                 Spacer()
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(ShengbianColors.success)
+                Image(systemName: "waveform.badge.exclamationmark")
+                    .foregroundStyle(ShengbianColors.warning)
                     .font(.caption)
             }
             .padding(.horizontal, ShengbianMetrics.pageMargin)
@@ -566,14 +567,28 @@ struct InspirationRecordView: View {
             shotList: "现场走拍、开口瞬间、追问反馈、方案结果页"
         )
 
-        let capture = appStore.addInspiration(
-            transcription: transcription.isEmpty ? "（演示转录）" : transcription,
-            pawnQAs: qas,
-            bilibiliPack: pack,
-            projectID: projectID,
-            privacy: privacy,
-            isDemoFallback: true
-        )
+        let finalTranscription = transcription.isEmpty ? "（演示转录）" : transcription
+        let capture: InspirationCapture
+        do {
+            capture = try await appStore.addInspiration(
+                transcription: finalTranscription,
+                pawnQAs: qas,
+                bilibiliPack: pack,
+                projectID: projectID,
+                privacy: privacy,
+                isDemoFallback: true,
+                accessToken: session.accessToken
+            )
+        } catch {
+            capture = appStore.addInspiration(
+                transcription: finalTranscription,
+                pawnQAs: qas,
+                bilibiliPack: pack,
+                projectID: projectID,
+                privacy: privacy,
+                isDemoFallback: true
+            )
+        }
 
         withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) {
             savedCapture = capture

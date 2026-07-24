@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AssignInspirationView: View {
     @EnvironmentObject private var appStore: AppStore
+    @EnvironmentObject private var session: AppSession
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -10,6 +11,8 @@ struct AssignInspirationView: View {
     @State private var selectedProjectID: UUID?
     @State private var isCreatingProject = false
     @State private var searchText = ""
+    @State private var isSaving = false
+    @State private var saveError: String?
 
     private var filteredProjects: [CreatorProject] {
         if searchText.isEmpty { return appStore.projects }
@@ -56,6 +59,14 @@ struct AssignInspirationView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .alert("无法指派灵感", isPresented: Binding(
+            get: { saveError != nil },
+            set: { if !$0 { saveError = nil } }
+        )) {
+            Button("好", role: .cancel) {}
+        } message: {
+            Text(saveError ?? "请稍后重试。")
+        }
     }
 
     private var searchBar: some View {
@@ -172,13 +183,9 @@ struct AssignInspirationView: View {
                 }
 
                 Button {
-                    if let projectID = selectedProjectID {
-                        appStore.assignInspiration(inspirationID, toProject: projectID)
-                        Haptics.success()
-                    }
-                    dismiss()
+                    assignSelectedProject()
                 } label: {
-                    Text("确认")
+                    Text(isSaving ? "保存中…" : "确认")
                         .font(ShengbianTypography.headline)
                         .foregroundStyle(ShengbianColors.inverseText)
                         .padding(.horizontal, 24)
@@ -188,7 +195,7 @@ struct AssignInspirationView: View {
                             in: RoundedRectangle(cornerRadius: ShengbianMetrics.controlRadius, style: .continuous)
                         )
                 }
-                .disabled(selectedProjectID == nil)
+                .disabled(selectedProjectID == nil || isSaving)
                 .shengbianPressable(reduceMotion: reduceMotion)
             }
             .padding(.horizontal, ShengbianMetrics.pageMargin)
@@ -196,9 +203,31 @@ struct AssignInspirationView: View {
             .background(.ultraThinMaterial)
         }
     }
+
+    private func assignSelectedProject() {
+        guard let projectID = selectedProjectID, !isSaving else { return }
+        isSaving = true
+        Task {
+            do {
+                try await appStore.assignInspiration(
+                    inspirationID,
+                    toProject: projectID,
+                    accessToken: session.accessToken
+                )
+                isSaving = false
+                Haptics.success()
+                dismiss()
+            } catch {
+                isSaving = false
+                saveError = error.localizedDescription
+                Haptics.error()
+            }
+        }
+    }
 }
 
 #Preview("AssignInspirationView") {
     AssignInspirationView(inspirationID: UUID())
         .environmentObject(AppStore())
+        .environmentObject(AppSession())
 }

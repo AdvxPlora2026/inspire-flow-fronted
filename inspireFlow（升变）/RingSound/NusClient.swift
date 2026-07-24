@@ -657,7 +657,7 @@ private final class BLEDiscoverySession:
     switch central.state {
     case .poweredOn:
       central.scanForPeripherals(
-        withServices: identifier == nil ? [serviceUUID] : nil,
+        withServices: nil,
         options: [CBCentralManagerScanOptionAllowDuplicatesKey: false]
       )
     case .unknown, .resetting:

@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /Users/cret/Desktop/advx/inspireFlow && ls -la && echo \"---GIT---\" && git log --oneline -5 2>/dev/null)"
+    ]
+  }
+}

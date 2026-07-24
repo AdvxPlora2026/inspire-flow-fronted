@@ -3,15 +3,23 @@ import UniformTypeIdentifiers
 
 struct ProjectPawnWorkspaceView: View {
     @EnvironmentObject private var appStore: AppStore
+    @EnvironmentObject private var session: AppSession
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let projectID: UUID
 
-    @State private var draft = ""
+    @State private var draft: String
     @State private var isImporting = false
     @State private var generationTask: Task<Void, Never>?
     @State private var generatingMessageID: UUID?
     @State private var importError: String?
+    @State private var actionError: String?
+    @State private var savedMessageIDs: Set<UUID> = []
+
+    init(projectID: UUID, initialDraft: String = "") {
+        self.projectID = projectID
+        _draft = State(initialValue: initialDraft)
+    }
 
     private var project: CreatorProject? {
         appStore.projects.first { $0.id == projectID }
@@ -57,6 +65,11 @@ struct ProjectPawnWorkspaceView: View {
         } message: {
             Text(importError ?? "请稍后重试。")
         }
+        .alert("PAWN 操作失败", isPresented: actionErrorBinding) {
+            Button("好", role: .cancel) {}
+        } message: {
+            Text(actionError ?? "请稍后重试。")
+        }
         .onDisappear {
             stopGeneration()
         }
@@ -70,13 +83,19 @@ struct ProjectPawnWorkspaceView: View {
 
                     if let conversation {
                         ForEach(conversation.messages) { message in
-                            ProjectPawnMessageBubble(message: message)
-                                .id(message.id)
-                                .transition(
-                                    reduceMotion
-                                        ? .opacity
-                                        : .move(edge: .bottom).combined(with: .opacity)
-                                )
+                            VStack(alignment: .leading, spacing: 8) {
+                                ProjectPawnMessageBubble(message: message)
+
+                                if message.role == .pawn && message.isComplete && !message.text.isEmpty {
+                                    pawnActions(for: message, project: project)
+                                }
+                            }
+                            .id(message.id)
+                            .transition(
+                                reduceMotion
+                                    ? .opacity
+                                    : .move(edge: .bottom).combined(with: .opacity)
+                            )
                         }
 
                         if !conversation.attachments.isEmpty {
@@ -109,7 +128,7 @@ struct ProjectPawnWorkspaceView: View {
 
                 Spacer()
 
-                Text("本地演示")
+                Text(session.isDemoMode ? "本地演示" : "云端 PAWN")
                     .font(ShengbianTypography.technical)
                     .foregroundStyle(ShengbianColors.tertiaryText)
             }
@@ -125,6 +144,14 @@ struct ProjectPawnWorkspaceView: View {
             Label(project.stage.title, systemImage: "circle.inset.filled")
                 .font(ShengbianTypography.caption)
                 .foregroundStyle(ShengbianColors.primaryText)
+
+            NavigationLink {
+                MindMapView(projectID: project.id)
+            } label: {
+                Label("查看 PAWN 已连接的项目脑图", systemImage: "point.3.connected.trianglepath.dotted")
+                    .font(ShengbianTypography.caption)
+                    .foregroundStyle(ShengbianColors.primaryText)
+            }
         }
         .padding(ShengbianMetrics.cardPadding)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: ShengbianMetrics.cardRadius, style: .continuous))
@@ -146,9 +173,9 @@ struct ProjectPawnWorkspaceView: View {
                         .font(ShengbianTypography.subheadline)
                         .lineLimit(1)
                     Spacer()
-                    Image(systemName: "checkmark")
-                        .font(.caption.bold())
-                        .foregroundStyle(ShengbianColors.secondaryText)
+                    Text("仅记录文件名")
+                        .font(ShengbianTypography.technical)
+                        .foregroundStyle(ShengbianColors.tertiaryText)
                 }
                 .padding(12)
                 .background(
@@ -163,7 +190,7 @@ struct ProjectPawnWorkspaceView: View {
         VStack(spacing: 10) {
             if isGenerating {
                 HStack(spacing: 10) {
-                    Label("PAWN 正在整理本地演示回复", systemImage: "ellipsis")
+                    Label(session.isDemoMode ? "PAWN 正在整理本地演示回复" : "PAWN 正在回复", systemImage: "ellipsis")
                         .font(ShengbianTypography.caption)
                         .foregroundStyle(ShengbianColors.secondaryText)
 
@@ -250,6 +277,88 @@ struct ProjectPawnWorkspaceView: View {
         )
     }
 
+    private var actionErrorBinding: Binding<Bool> {
+        Binding(
+            get: { actionError != nil },
+            set: { if !$0 { actionError = nil } }
+        )
+    }
+
+    private func pawnActions(for message: PawnMessage, project: CreatorProject) -> some View {
+        HStack(spacing: 8) {
+            Button {
+                saveAsInspiration(message, project: project)
+            } label: {
+                Label(
+                    savedMessageIDs.contains(message.id) ? "已存入灵感" : "存为项目灵感",
+                    systemImage: savedMessageIDs.contains(message.id) ? "checkmark" : "lightbulb"
+                )
+            }
+            .disabled(savedMessageIDs.contains(message.id))
+
+            Menu {
+                ForEach(PawnApplicationTarget.allCases) { target in
+                    Button {
+                        apply(message, to: target, project: project)
+                    } label: {
+                        Label(target.title, systemImage: target.symbol)
+                    }
+                }
+            } label: {
+                Label("应用到", systemImage: "arrow.down.doc")
+            }
+
+            Button {
+                draft = "请基于这条回复继续给出下一步可直接执行的修改：\(message.text)"
+            } label: {
+                Image(systemName: "arrow.turn.down.right")
+            }
+            .accessibilityLabel("继续执行")
+        }
+        .font(ShengbianTypography.caption)
+        .foregroundStyle(ShengbianColors.secondaryText)
+        .buttonStyle(.bordered)
+    }
+
+    private func saveAsInspiration(_ message: PawnMessage, project: CreatorProject) {
+        guard !savedMessageIDs.contains(message.id) else { return }
+        Task {
+            do {
+                _ = try await appStore.addInspiration(
+                    transcription: message.text,
+                    projectID: project.id,
+                    isDemoFallback: session.isDemoMode,
+                    sourceType: .agent,
+                    accessToken: session.accessToken
+                )
+                savedMessageIDs.insert(message.id)
+                Haptics.success()
+            } catch {
+                actionError = error.localizedDescription
+                Haptics.error()
+            }
+        }
+    }
+
+    private func apply(_ message: PawnMessage, to target: PawnApplicationTarget, project: CreatorProject) {
+        Task {
+            do {
+                _ = try await appStore.addInspiration(
+                    transcription: "PAWN 已将回复应用为\(target.title)：\n\(message.text)",
+                    bilibiliPack: target.pack(projectName: project.name, content: message.text),
+                    projectID: project.id,
+                    isDemoFallback: session.isDemoMode,
+                    sourceType: .agent,
+                    accessToken: session.accessToken
+                )
+                Haptics.success()
+            } catch {
+                actionError = error.localizedDescription
+                Haptics.error()
+            }
+        }
+    }
+
     private func send(project: CreatorProject) {
         let content = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !content.isEmpty, !isGenerating else { return }
@@ -257,14 +366,67 @@ struct ProjectPawnWorkspaceView: View {
         appStore.sendCreatorMessage(content, projectID: project.id)
         draft = ""
         Haptics.impact(.light)
-        generateResponse(project: project, prompt: content)
+        if let accessToken = session.accessToken {
+            generateRemoteResponse(project: project, prompt: content, accessToken: accessToken)
+        } else {
+            generateResponse(project: project, prompt: content)
+        }
+    }
+
+    private func generateRemoteResponse(project: CreatorProject, prompt: String, accessToken: String) {
+        guard let messageID = appStore.beginPawnMessage(projectID: project.id) else { return }
+        generatingMessageID = messageID
+        generationTask = Task { @MainActor in
+            do {
+                let conversationID: UUID
+                if let existing = appStore.remoteConversationID(for: project.id) {
+                    conversationID = existing
+                } else {
+                    let created = try await ConversationAPI.create(
+                        title: project.name,
+                        accessToken: accessToken
+                    )
+                    conversationID = created.id
+                    appStore.setRemoteConversationID(created.id, for: project.id)
+                }
+
+                let turn = try await ConversationAPI.sendMessage(
+                    conversationID,
+                    content: "项目《\(project.name)》：\(prompt)",
+                    accessToken: accessToken
+                )
+                appStore.updatePawnMessage(
+                    messageID,
+                    text: turn.assistantMessage.content,
+                    isComplete: true,
+                    projectID: project.id
+                )
+                generatingMessageID = nil
+                generationTask = nil
+                Haptics.success()
+            } catch {
+                appStore.updatePawnMessage(
+                    messageID,
+                    text: "请求失败：\(error.localizedDescription)\n\n你的输入已保留，可以稍后重新生成。",
+                    isComplete: true,
+                    projectID: project.id
+                )
+                generatingMessageID = nil
+                generationTask = nil
+                Haptics.error()
+            }
+        }
     }
 
     private func regenerate(after message: PawnMessage, project: CreatorProject) {
         guard !isGenerating else { return }
         appStore.removeMessage(message.id, projectID: project.id)
         let prompt = conversation?.messages.last(where: { $0.role == .creator })?.text ?? project.initialIdea
-        generateResponse(project: project, prompt: prompt)
+        if let accessToken = session.accessToken {
+            generateRemoteResponse(project: project, prompt: prompt, accessToken: accessToken)
+        } else {
+            generateResponse(project: project, prompt: prompt)
+        }
     }
 
     private func generateResponse(project: CreatorProject, prompt: String) {
@@ -327,6 +489,41 @@ struct ProjectPawnWorkspaceView: View {
         case .failure(let error):
             importError = error.localizedDescription
             Haptics.error()
+        }
+    }
+}
+
+private enum PawnApplicationTarget: String, CaseIterable, Identifiable {
+    case outline
+    case storyboard
+    case script
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .outline: "视频大纲"
+        case .storyboard: "分镜清单"
+        case .script: "提词稿"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .outline: "list.bullet.rectangle"
+        case .storyboard: "rectangle.split.3x1"
+        case .script: "text.viewfinder"
+        }
+    }
+
+    func pack(projectName: String, content: String) -> BilibiliPack {
+        switch self {
+        case .outline:
+            BilibiliPack(title: "\(projectName) · 视频大纲", hook: "", outline: content, shotList: "")
+        case .storyboard:
+            BilibiliPack(title: "\(projectName) · 分镜清单", hook: "", outline: "", shotList: content)
+        case .script:
+            BilibiliPack(title: "\(projectName) · 提词稿", hook: content, outline: "", shotList: "")
         }
     }
 }

@@ -9,6 +9,7 @@ import SwiftUI
 
 struct NewProjectView: View {
     @EnvironmentObject private var appStore: AppStore
+    @EnvironmentObject private var session: AppSession
 
     @Environment(\.dismiss)
     private var dismiss
@@ -24,9 +25,10 @@ struct NewProjectView: View {
     @State private var selectedContentType: ProjectContentType
     @State private var selectedGoal: ProjectGoal
     @State private var selectedKind: ProjectKind
-    @State private var remembersContext: Bool
     @State private var isShowingSuccess = false
     @State private var successFeedbackTrigger = 0
+    @State private var isSaving = false
+    @State private var saveError: String?
 
     private let maximumProjectNameLength = 40
     private let maximumIdeaLength = 500
@@ -36,8 +38,7 @@ struct NewProjectView: View {
         initialIdea: String = "",
         selectedContentType: ProjectContentType = .video,
         selectedGoal: ProjectGoal = .outline,
-        selectedKind: ProjectKind = .personal,
-        remembersContext: Bool = true
+        selectedKind: ProjectKind = .personal
     ) {
         _projectName = State(initialValue: projectName)
         _initialIdea = State(initialValue: initialIdea)
@@ -46,9 +47,6 @@ struct NewProjectView: View {
         )
         _selectedGoal = State(initialValue: selectedGoal)
         _selectedKind = State(initialValue: selectedKind)
-        _remembersContext = State(
-            initialValue: remembersContext
-        )
     }
 
     var body: some View {
@@ -66,8 +64,6 @@ struct NewProjectView: View {
                     goalSection
 
                     projectKindSection
-
-                    contextSection
 
                     createButton
                 }
@@ -90,7 +86,7 @@ struct NewProjectView: View {
                         ? Color.white
                         : Color.white.opacity(0.35)
                 )
-                .disabled(!canCreate)
+                .disabled(!canCreate || isSaving)
                 .accessibilityHint(
                     canCreate
                         ? "创建当前项目"
@@ -115,12 +111,22 @@ struct NewProjectView: View {
                 dismiss()
             }
         } message: {
-            Text("项目已保存到本机，PAWN 可以从这里继续维护创作上下文。")
+            Text(session.isDemoMode
+                ? "项目已保存到本机，PAWN 可以从这里继续维护创作上下文。"
+                : "项目已同步到云端，PAWN 可以从这里继续维护创作上下文。")
         }
         .sensoryFeedback(
             .success,
             trigger: successFeedbackTrigger
         )
+        .alert("无法创建项目", isPresented: Binding(
+            get: { saveError != nil },
+            set: { if !$0 { saveError = nil } }
+        )) {
+            Button("好", role: .cancel) {}
+        } message: {
+            Text(saveError ?? "请稍后重试。")
+        }
     }
 
     private var normalizedProjectName: String {
@@ -333,44 +339,6 @@ struct NewProjectView: View {
         }
     }
 
-    private var contextSection: some View {
-        NewProjectCard {
-            Toggle(isOn: $remembersContext) {
-                HStack(alignment: .top, spacing: 13) {
-                    Image(systemName: "link")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 38, height: 38)
-                        .background(
-                            Color.white.opacity(0.08),
-                            in: Circle()
-                        )
-                        .accessibilityHidden(true)
-
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("持续记住项目上下文")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
-
-                        Text(
-                            "后续灵感和对话可以自动关联到这个项目。"
-                        )
-                        .font(.caption)
-                        .foregroundStyle(
-                            Color.white.opacity(0.48)
-                        )
-                        .lineSpacing(2)
-                    }
-                }
-            }
-            .tint(.white)
-            .accessibilityLabel("让 PAWN 持续记住项目上下文")
-            .accessibilityHint(
-                "开启后，后续灵感和对话可以关联到当前项目"
-            )
-        }
-    }
-
     private var projectKindSection: some View {
         NewProjectSection(
             title: "项目类型",
@@ -411,8 +379,8 @@ struct NewProjectView: View {
                 reduceMotion: reduceMotion
             )
         )
-        .disabled(!canCreate)
-        .opacity(canCreate ? 1 : 0.34)
+        .disabled(!canCreate || isSaving)
+        .opacity(canCreate && !isSaving ? 1 : 0.34)
         .accessibilityHint(
             canCreate
                 ? "创建项目并返回创作页面"
@@ -448,20 +416,37 @@ struct NewProjectView: View {
     }
 
     private func createProject() {
-        guard canCreate else {
+        guard canCreate, !isSaving else {
             focusedField = .projectName
             return
         }
 
         projectName = normalizedProjectName
         focusedField = nil
-        appStore.createProject(
-            name: projectName,
-            initialIdea: initialIdea,
-            kind: selectedKind
-        )
-        successFeedbackTrigger += 1
-        isShowingSuccess = true
+        isSaving = true
+        Task {
+            do {
+                let idea = initialIdea.trimmingCharacters(in: .whitespacesAndNewlines)
+                let projectSummary = idea.isEmpty
+                    ? "创作目标：\(selectedGoal.title)"
+                    : "\(idea)\n创作目标：\(selectedGoal.title)"
+                _ = try await appStore.createProject(
+                    name: projectName,
+                    initialIdea: projectSummary,
+                    kind: selectedKind,
+                    contentType: selectedContentType.title,
+                    audience: "内容创作者",
+                    accessToken: session.accessToken
+                )
+                isSaving = false
+                successFeedbackTrigger += 1
+                isShowingSuccess = true
+            } catch {
+                isSaving = false
+                saveError = error.localizedDescription
+                Haptics.error()
+            }
+        }
     }
 }
 
@@ -783,6 +768,7 @@ enum ProjectGoal: String, CaseIterable, Identifiable {
     }
     .preferredColorScheme(.dark)
     .environmentObject(AppStore())
+    .environmentObject(AppSession())
 }
 
 #Preview("New Project - Filled") {
@@ -791,9 +777,11 @@ enum ProjectGoal: String, CaseIterable, Identifiable {
             projectName: "无屏创作的一天",
             initialIdea: "记录如何用戒指和耳机捕捉现场灵感，并把它逐步整理成可以拍摄的视频。",
             selectedContentType: .video,
-            selectedGoal: .outline
+            selectedGoal: .outline,
+            selectedKind: .personal
         )
     }
     .preferredColorScheme(.dark)
     .environmentObject(AppStore())
+    .environmentObject(AppSession())
 }

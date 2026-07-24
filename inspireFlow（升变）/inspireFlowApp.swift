@@ -26,6 +26,9 @@ struct inspireFlowApp: App {
                 if ringManager.hasSavedRing {
                     ringManager.reconnectSaved()
                 }
+                await session.restoreSession()
+                await session.loadCreatorProfile()
+                await appStore.syncRemoteData(accessToken: session.accessToken)
             }
         }
     }

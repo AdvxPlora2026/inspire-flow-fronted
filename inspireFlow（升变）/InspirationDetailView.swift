@@ -2,6 +2,7 @@ import SwiftUI
 
 struct InspirationDetailView: View {
     @EnvironmentObject private var appStore: AppStore
+    @EnvironmentObject private var session: AppSession
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -9,6 +10,8 @@ struct InspirationDetailView: View {
 
     @State private var isAssigning = false
     @State private var isConfirmingDelete = false
+    @State private var isDeleting = false
+    @State private var actionError: String?
 
     private var inspiration: InspirationCapture? {
         appStore.inspirations.first { $0.id == inspirationID }
@@ -53,14 +56,21 @@ struct InspirationDetailView: View {
         }
         .confirmationDialog("删除这条灵感？", isPresented: $isConfirmingDelete, titleVisibility: .visible) {
             Button("删除", role: .destructive) {
-                appStore.deleteInspiration(inspirationID)
-                dismiss()
+                deleteInspiration()
             }
         } message: {
             Text("删除后无法恢复。")
         }
         .sheet(isPresented: $isAssigning) {
             AssignInspirationView(inspirationID: inspirationID)
+        }
+        .alert("操作失败", isPresented: Binding(
+            get: { actionError != nil },
+            set: { if !$0 { actionError = nil } }
+        )) {
+            Button("好", role: .cancel) {}
+        } message: {
+            Text(actionError ?? "请稍后重试。")
         }
     }
 
@@ -175,18 +185,24 @@ struct InspirationDetailView: View {
 
             if let projectID = inspiration.projectID,
                let project = appStore.projects.first(where: { $0.id == projectID }) {
-                ShengbianGlassCard {
-                    HStack(spacing: 12) {
-                        Image(systemName: "square.stack.3d.up.fill")
-                            .foregroundStyle(ShengbianColors.secondaryText)
-                        Text(project.name)
-                            .font(ShengbianTypography.bodyEmphasized)
-                        Spacer()
-                        Text(project.stage.title)
-                            .font(ShengbianTypography.caption)
-                            .foregroundStyle(ShengbianColors.secondaryText)
+                Button {
+                    Haptics.selection()
+                    isAssigning = true
+                } label: {
+                    ShengbianGlassCard {
+                        HStack(spacing: 12) {
+                            Image(systemName: "square.stack.3d.up.fill")
+                                .foregroundStyle(ShengbianColors.secondaryText)
+                            Text(project.name)
+                                .font(ShengbianTypography.bodyEmphasized)
+                            Spacer()
+                            Text("更改")
+                                .font(ShengbianTypography.caption)
+                                .foregroundStyle(ShengbianColors.secondaryText)
+                        }
                     }
                 }
+                .buttonStyle(.plain)
             } else {
                 Button {
                     Haptics.selection()
@@ -212,6 +228,22 @@ struct InspirationDetailView: View {
                     }
                 }
                 .shengbianPressable(reduceMotion: reduceMotion)
+            }
+        }
+    }
+
+    private func deleteInspiration() {
+        guard !isDeleting else { return }
+        isDeleting = true
+        Task {
+            do {
+                try await appStore.deleteInspiration(inspirationID, accessToken: session.accessToken)
+                Haptics.success()
+                dismiss()
+            } catch {
+                isDeleting = false
+                actionError = error.localizedDescription
+                Haptics.error()
             }
         }
     }

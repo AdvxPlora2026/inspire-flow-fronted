@@ -52,77 +52,102 @@ references.
 
 ## 2. What is already live — do not break this contract
 
-The frontend already depends on these exact behaviors. Any backend change
-here needs a coordinated frontend release, not a silent break.
+The live backend at `https://platform.advx.uk` exposes the following surface
+(verified against `/openapi.json` on 2026-07-25). The frontend has protocol-
+level wrappers for all of these in the tree; actual View wiring is in
+progress.
 
-| Endpoint | Behavior the frontend already relies on |
+| Group | Endpoints | Frontend file |
+| --- | --- | --- |
+| Health | `GET /api/v1/health` | (none needed) |
+| Auth | `POST /api/v1/users`, `POST/DELETE /api/v1/sessions`, `GET/PATCH /api/v1/users/me` | `AuthAPI.swift`, `AppSession.swift` (done) |
+| Profile | `GET/PATCH /api/v1/users/me/profile` | `ProfileAPI.swift` |
+| Projects | `POST /api/v1/projects/drafts`, `POST`/`GET`/`GET {id}`/`PATCH`/`DELETE` `/api/v1/projects`, `GET /api/v1/projects/{id}/inspirations` | `ProjectAPI.swift` |
+| Inspirations | `POST`/`GET`/`GET {id}`/`PATCH`/`DELETE` `/api/v1/inspirations`, `PUT`/`DELETE` `/api/v1/inspirations/{id}/projects/{project_id}` | `InspirationAPI.swift` |
+| Agent conversations | `POST`/`GET`/`GET {id}`/`PATCH`/`DELETE` `/api/v1/conversations`, `GET`/`POST` `/api/v1/conversations/{id}/messages`, `POST .../messages/stream` (SSE) | `ConversationAPI.swift` |
+| Memories | CRUD under `/api/v1/users/me/memories` | Not yet wired (Agent creates them automatically) |
+| Transcriptions | `POST` (multipart audio upload) + `GET /api/v1/transcriptions/{job_id}` | `TranscriptionAPI.swift` |
+| Commercial tasks | `POST`/`POST submit`/`POST authorize`/`POST settle`/`GET proof` | Not yet wired |
+| Brands | CRUD + members + invitations + accept/decline | Not yet wired |
+| Brand engagement | Creator discovery, follows, interests, creator inbox | Not yet wired |
+| Workshops | Draft/publish/withdraw/preview, social accounts, contacts, project selection, brand authorizations, public workshop view | Not yet wired |
+
+### Key schema details the frontend already handles
+
+**Inspiration** (`InspirationAPI.swift`):
+- `status`: `inbox | developing | converted | archived`
+- `source_type`: `manual | agent | voice`
+- `projects`: array of `{id, title, icon_url}` — multiple projects per inspiration
+- `PUT/DELETE .../projects/{project_id}` for linking/unlinking
+
+**Project** (`ProjectAPI.swift`):
+- `GET /{id}` returns `ProjectDetail` with `inspiration_count: Int`
+- `GET /{id}/inspirations` for project-scoped inspiration lists
+- Fields are `title/type/audience/summary/icon_url` — still no `kind`/`stage` (see section 8)
+
+**Conversation** (`ConversationAPI.swift`):
+- `POST /{id}/messages` returns `AgentTurnPublic` with `turn_id`, `user_message`, `assistant_message`, `memory_updates`, `memory_extraction_status`
+- `POST /{id}/messages/stream` for Server-Sent Events streaming
+
+**Transcription** (`TranscriptionAPI.swift`):
+- `POST /api/v1/transcriptions` is `multipart/form-data` (field `file`, plus `language` + `use_itn`)
+- Poll `GET .../{job_id}` for status; succeeded jobs include `text`, `detected_language`, `emotions[]`, `audio_events[]`, `duration_seconds`
+- Job statuses: `queued | running | succeeded | failed`
+
+**Commercial tasks** (`ProjectAPI.swift` — not wired to Views yet):
+- Full lifecycle: `created → escrow_funded → submission_recorded → authorization_activated → settlement_released`
+- Chain transactions include `network`, `chain_id`, `transaction_hash`, `explorer_url`, `amount`, `denom`, `failure_reason`, `retryable`
+- `GET /proof` returns task + submissions + transactions
+
+### Behaviors the frontend already relies on
+
+| Behavior | Where |
 | --- | --- |
-| `POST /api/v1/users` | Registers only; does **not** create a session. `nickname` 2–50 chars (NFKC-folded uniqueness), `password` 15–128 chars. `409 nickname_conflict`, `422 validation_error`. |
-| `POST /api/v1/sessions` | Login by nickname+password. Same `401 invalid_credentials` for unknown nickname or wrong password (frontend must not infer account existence from this). Returns `access_token`, `expires_at`, `user`. |
-| `DELETE /api/v1/sessions/current` | Revokes only the current token; other sessions for the same user stay valid. `204` empty body. |
-| `GET /api/v1/users/me` | Used by `AppSession.restoreSession()` on every launch to validate a cached Keychain token. `401 invalid_session` triggers a local sign-out; any other error (including no network) keeps the cached session so the app stays usable offline. |
-| `GET/PATCH /api/v1/users/me/profile` | Creator profile fields (`bio`, `timezone`, `preferred_language`, `creator_identity`, `content_focus`, `collaboration_preferences`). Not yet wired into `CreatorProfile` locally — planned next. |
-| `POST /api/v1/projects/drafts`, `/api/v1/projects` CRUD | Project fields are `title/type/audience/summary/icon_url` only. **The backend project model has no `kind` (personal/commercial) or `stage` (brief/creating/review/approved/settled) field.** The frontend's `CreatorProject` currently keeps those two fields as a local-only overlay. Flagged in section 8 as a decision point. |
-| Error envelope | `{"error": {"code": "...", "message": "..."}}` — no `retryable` or `request_id` today, unlike the richer envelope in section 9. See section 5 for why this matters. |
-
-Base URL used in development: `http://127.0.0.1:8000/api/v1`. Bare IP
-addresses are exempt from App Transport Security, so no Info.plist exception
-is required; physical-device testing needs the Mac's LAN IP instead of
-`127.0.0.1`.
+| Registration does **not** create a session | `AppSession.authenticate(…)` |
+| Login returns `access_token`, `expires_at`, `user` | `AppSession.authenticate(…)` |
+| Token stored in Keychain, not UserDefaults | `KeychainTokenStore` in `BackendClient.swift` |
+| `GET /users/me` on launch to validate cached token | `AppSession.restoreSession()` |
+| Only `401`/`invalid_session` signs the user out; network failures keep the cached session | `AppSession.restoreSession()` |
+| Error envelope: `{"error":{"code":"...","message":"...","details":[...]}}` | `BackendClient.APIErrorEnvelope` |
+| Base URL: `https://platform.advx.uk/api/v1` | `BackendConfig` |
 
 ## 3. Critical gap for the P0 demo
 
-None of the PAWN-specific endpoints below (captures, conversation answers,
-generation, commercial tasks) exist yet. Only a generic Agent conversation
-(`/api/v1/conversations`, `/messages`) and generic project CRUD exist. This
-blocks, in order of demo impact:
+The live backend has conversations, inspirations, projects, and commercial
+tasks. The one piece that still needs building for the demo loop is a
+**deterministic, schema-validated three-question interview with a Bilibili
+production pack**.
 
-1. A deterministic, exactly-three-question interview with `ready_to_generate`.
-2. A schema-validated Bilibili production pack the app can trust without
-   re-validating arbitrary model text itself.
-3. Capture/artifact persistence with an explicit visibility enum.
-4. Idempotent answer submission (`SEQUENCE_CONFLICT` on out-of-order answers).
-5. Any Injective commercial-task flow at all.
+This can be built directly on top of the existing conversation
+infrastructure — add a system prompt that:
+(a) asks at most three required questions (audience, format/duration,
+    opening angle);
+(b) on the turn after the third answer, emits the final assistant message
+    as **validated JSON only** matching the `bilibili_production_pack`
+    schema;
+(c) rejects and retries the model call server-side if the JSON fails
+    validation — never forward unvalidated model text to the app.
 
-### Recommended path given remaining hackathon time
+The `POST /conversations/{id}/messages` endpoint already exists and already
+returns `AgentTurnPublic`. The frontend's `InspirationRecordView` already
+has a `RecordPhase.questioning` state waiting for exactly this flow. The gap
+is purely in the prompt/validation layer on the backend.
 
-**Option A — reuse the existing Agent conversation infra (recommended).**
-Add a constrained "PAWN mode" instead of a parallel system:
+## 4. Injective — already live
 
-- `POST /api/v1/agent/pawn/captures` — wraps `create_conversation` +
-  first `messages` call with a fixed system prompt that (a) asks at most
-  three required questions (audience, format/duration, opening angle) and
-  (b) on the turn after the third answer, emits the final assistant message
-  as **validated JSON only**, matching the `bilibili_production_pack` schema
-  in section 7. Reject and retry the model call server-side if the JSON
-  fails validation — never forward unvalidated model text to the app.
-- Answers continue to use the existing `POST /conversations/{id}/messages`.
-- `GET /api/v1/agent/pawn/captures/{id}` returns the current turn/question,
-  `ready_to_generate`, and the artifact once generated.
+The complete commercial-task lifecycle exists at `platform.advx.uk`:
 
-This reuses the already-working conversation, message persistence, context
-compaction, and memory infrastructure, and only adds a thin, validated layer
-on top. It is the smallest change that still satisfies "never pass arbitrary
-model text directly to the app."
+- `POST /api/v1/commercial-tasks` — create with budget, deadline, splits
+- `POST .../submissions` — submit artifact version with SHA-256
+- `POST .../authorize` — activate payment authorization
+- `POST .../settle` — release settlement
+- `GET .../proof` — returns task + submissions + chain transactions
 
-**Option B — build the full original spec** (sections 6–8 below) as
-literally specified. More correct long-term, more work now. Do this only if
-Option A's constrained-prompt approach proves unreliable in testing.
-
-Either option must still satisfy: exactly one question returned per turn,
-`SEQUENCE_CONFLICT` on an out-of-order answer, idempotency-key support, and a
-`demo_fixture` path that works with no model/network at all (the frontend
-already has this fallback locally — see `InspirationRecordView.swift`'s
-`isDemoFallback` and keep it as the safety net, not the primary path).
-
-## 4. Injective — currently 0% built
-
-Nothing in section 8/9 exists yet. This is P0 item 5 in `TODO.md`. Minimum
-viable slice for the stage demo: one fixed commercial brief, one real
-Injective testnet transaction (escrow preferred, split settlement
-acceptable), and a `GET .../proof` endpoint returning a provider-supplied
-explorer URL. The frontend must never construct an explorer URL from a raw
-transaction hash — always use the backend-returned URL.
+Chain transactions include `network`, `chain_id`, `transaction_hash`,
+`explorer_url`, `status` (`prepared|broadcast|confirmed|failed`), `amount`,
+`denom`, `failure_reason`, and `retryable`. The frontend has the DTOs
+(`ProjectAPI.swift`) but no View wiring yet — this is the last piece needed
+for the commercial proof part of the demo loop.
 
 ## 5. Requirements handed to the frontend (already agreed, tracked here for the backend's benefit)
 

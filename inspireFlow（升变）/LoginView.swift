@@ -4,7 +4,7 @@ struct LoginView: View {
     @EnvironmentObject private var session: AppSession
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    @State private var email = ""
+    @State private var nickname = ""
     @State private var password = ""
     @State private var selectedRole: UserRole = .creator
     @State private var isCreatingAccount = false
@@ -96,18 +96,18 @@ struct LoginView: View {
     private var credentialsForm: some View {
         VStack(spacing: 12) {
             LoginField(
-                title: "邮箱",
-                symbol: "envelope.fill",
-                text: $email,
-                contentType: .emailAddress,
+                title: "昵称（2-50 位）",
+                symbol: "person.fill",
+                text: $nickname,
+                contentType: .username,
                 isSecure: false
             )
-            .focused($focusedField, equals: .email)
+            .focused($focusedField, equals: .nickname)
             .submitLabel(.next)
             .onSubmit { focusedField = .password }
 
             LoginField(
-                title: "密码（至少 6 位）",
+                title: "密码（至少 15 位）",
                 symbol: "lock.fill",
                 text: $password,
                 contentType: isCreatingAccount ? .newPassword : .password,
@@ -118,20 +118,37 @@ struct LoginView: View {
             .onSubmit(submit)
 
             if hasAttemptedSubmit && !isValid {
-                Label("请输入有效邮箱和至少 6 位密码", systemImage: "exclamationmark.circle.fill")
+                Label("昵称需 2-50 位，密码需 15-128 位", systemImage: "exclamationmark.circle.fill")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.orange)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if let authErrorMessage = session.authErrorMessage {
+                Label(authErrorMessage, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.red)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
 
     private var primaryButton: some View {
-        ShengbianPrimaryButton(
-            title: isCreatingAccount ? "创建并进入" : "登录",
-            symbol: "arrow.right",
-            action: submit
-        )
+        ZStack {
+            ShengbianPrimaryButton(
+                title: isCreatingAccount ? "创建并进入" : "登录",
+                symbol: "arrow.right",
+                action: submit
+            )
+            .opacity(session.isAuthenticating ? 0 : 1)
+
+            if session.isAuthenticating {
+                ProgressView()
+                    .tint(ShengbianColors.inverseText)
+            }
+        }
+        .disabled(session.isAuthenticating)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: session.isAuthenticating)
     }
 
     private var modeButton: some View {
@@ -147,28 +164,46 @@ struct LoginView: View {
     }
 
     private var isValid: Bool {
-        email.contains("@") && email.contains(".") && password.count >= 6
+        let trimmedNickname = nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedNickname.count >= 2 && trimmedNickname.count <= 50 && password.count >= 15 && password.count <= 128
     }
 
     private func submit() {
         withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) {
             hasAttemptedSubmit = true
         }
+        focusedField = nil
+
+        // Demo credentials: nickname "123" and password "123" enter a local-only
+        // sandbox with freely switchable roles and resettable demo data.
+        let trimmedNickname = nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedNickname == "123" && password == "123" {
+            session.signInDemo(role: selectedRole)
+            Haptics.success()
+            return
+        }
+
         guard isValid else {
             Haptics.error()
             return
         }
-        focusedField = nil
-        if isCreatingAccount {
-            session.register(email: email, role: selectedRole)
-        } else {
-            session.signIn(email: email, role: selectedRole)
+        Task {
+            let success: Bool
+            if isCreatingAccount {
+                success = await session.register(nickname: trimmedNickname, password: password, role: selectedRole)
+            } else {
+                success = await session.signIn(nickname: trimmedNickname, password: password, role: selectedRole)
+            }
+            if success {
+                Haptics.success()
+            } else {
+                Haptics.error()
+            }
         }
-        Haptics.success()
     }
 
     private enum Field {
-        case email
+        case nickname
         case password
     }
 }
@@ -192,7 +227,6 @@ private struct LoginField: View {
                 } else {
                     TextField(title, text: $text)
                         .textInputAutocapitalization(.never)
-                        .keyboardType(.emailAddress)
                 }
             }
             .textContentType(contentType)

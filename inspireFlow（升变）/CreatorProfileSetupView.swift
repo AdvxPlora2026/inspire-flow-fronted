@@ -13,6 +13,8 @@ struct CreatorProfileSetupView: View {
 
     @State private var profile: CreatorProfile
     @State private var hasAttemptedSave = false
+    @State private var isSaving = false
+    @State private var saveError: String?
 
     init(mode: Mode, profile: CreatorProfile = .empty(displayName: "")) {
         self.mode = mode
@@ -37,6 +39,14 @@ struct CreatorProfileSetupView: View {
         }
         .preferredColorScheme(.dark)
         .onAppear { profile = session.creatorProfile }
+        .alert("无法保存资料", isPresented: Binding(
+            get: { saveError != nil },
+            set: { if !$0 { saveError = nil } }
+        )) {
+            Button("好", role: .cancel) {}
+        } message: {
+            Text(saveError ?? "请稍后重试。")
+        }
     }
 
     private var identitySection: some View {
@@ -136,8 +146,9 @@ struct CreatorProfileSetupView: View {
         }
 
         ToolbarItem(placement: .confirmationAction) {
-            Button("保存", action: save)
+            Button(isSaving ? "保存中…" : "保存", action: save)
                 .fontWeight(.semibold)
+                .disabled(isSaving)
         }
     }
 
@@ -158,10 +169,20 @@ struct CreatorProfileSetupView: View {
 
     private func save() {
         hasAttemptedSave = true
-        guard !trimmedDisplayName.isEmpty else { return }
+        guard !trimmedDisplayName.isEmpty, !isSaving else { return }
         profile.displayName.value = trimmedDisplayName
         profile.hasCompletedSetup = true
-        session.saveCreatorProfile(profile)
-        if mode == .editing { dismiss() }
+        isSaving = true
+        Task {
+            let success = await session.saveCreatorProfileRemotely(profile)
+            isSaving = false
+            if success {
+                Haptics.success()
+                if mode == .editing { dismiss() }
+            } else {
+                saveError = session.authErrorMessage ?? "请稍后重试。"
+                Haptics.error()
+            }
+        }
     }
 }

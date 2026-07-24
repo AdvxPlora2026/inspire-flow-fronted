@@ -87,6 +87,12 @@ enum ProjectKind: String, Codable, CaseIterable, Identifiable {
         case .commercial: "商业委托"
         }
     }
+
+    static func inferred(from type: String) -> ProjectKind {
+        let normalized = type.lowercased()
+        let commercialMarkers = ["商业", "委托", "品牌", "commercial", "brand", "brief"]
+        return commercialMarkers.contains(where: normalized.contains) ? .commercial : .personal
+    }
 }
 
 enum ProjectStage: String, Codable, CaseIterable {
@@ -150,14 +156,21 @@ final class AppStore: ObservableObject {
     @Published private(set) var projects: [CreatorProject]
     @Published private(set) var pawnConversations: [PawnConversation]
     @Published private(set) var inspirations: [InspirationCapture]
+    @Published private(set) var isSyncing = false
+    @Published private(set) var syncErrorMessage: String?
 
     private let storageKey = "creatorProjects.v1"
     private let pawnConversationsStorageKey = "pawnConversations.v1"
     private let inspirationsStorageKey = "inspirations.v1"
+    private let remoteConversationIDsKey = "remoteConversationIDs.v1"
     private let defaults: UserDefaults
+    private var remoteConversationIDs: [UUID: UUID]
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        remoteConversationIDs = defaults.data(forKey: remoteConversationIDsKey)
+            .flatMap { try? JSONDecoder().decode([UUID: UUID].self, from: $0) }
+            ?? [:]
         if let data = defaults.data(forKey: storageKey),
            let decoded = try? JSONDecoder().decode([CreatorProject].self, from: data) {
             projects = decoded
@@ -195,6 +208,87 @@ final class AppStore: ObservableObject {
         return project
     }
 
+    @discardableResult
+    func createProject(
+        name: String,
+        initialIdea: String,
+        kind: ProjectKind = .personal,
+        contentType: String = "视频",
+        audience: String = "内容创作者",
+        accessToken: String?
+    ) async throws -> CreatorProject {
+        guard let accessToken else {
+            return createProject(name: name, initialIdea: initialIdea, kind: kind)
+        }
+
+        let remote = try await ProjectAPI.create(
+            accessToken: accessToken,
+            title: name.trimmingCharacters(in: .whitespacesAndNewlines),
+            type: contentType,
+            audience: audience,
+            summary: initialIdea.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? "从 inspireFlow 创建的项目"
+                : initialIdea.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+        let project = CreatorProject(
+            id: remote.id,
+            name: remote.title,
+            initialIdea: remote.summary,
+            kind: kind,
+            stage: .brief,
+            createdAt: remote.createdAt
+        )
+        projects.removeAll { $0.id == project.id }
+        projects.insert(project, at: 0)
+        persist()
+        return project
+    }
+
+    func syncRemoteData(accessToken: String?) async {
+        guard let accessToken else { return }
+        isSyncing = true
+        syncErrorMessage = nil
+        defer { isSyncing = false }
+
+        do {
+            async let projectPage = ProjectAPI.list(accessToken: accessToken)
+            async let inspirationPage = InspirationAPI.list(accessToken: accessToken)
+            let (remoteProjects, remoteInspirations) = try await (projectPage, inspirationPage)
+
+            let localProjectsByID = Dictionary(uniqueKeysWithValues: projects.map { ($0.id, $0) })
+            projects = remoteProjects.items.map { item in
+                let overlay = localProjectsByID[item.id]
+                return CreatorProject(
+                    id: item.id,
+                    name: item.title,
+                    initialIdea: item.summary,
+                    kind: overlay?.kind ?? ProjectKind.inferred(from: item.type),
+                    stage: overlay?.stage ?? .brief,
+                    createdAt: item.createdAt
+                )
+            }
+
+            let localInspirationsByID = Dictionary(uniqueKeysWithValues: inspirations.map { ($0.id, $0) })
+            inspirations = remoteInspirations.items.map { item in
+                let overlay = localInspirationsByID[item.id]
+                return InspirationCapture(
+                    id: item.id,
+                    transcription: item.content,
+                    pawnQAs: overlay?.pawnQAs ?? [],
+                    bilibiliPack: overlay?.bilibiliPack,
+                    projectID: item.projects.first?.id,
+                    privacy: overlay?.privacy ?? .privateOnly,
+                    createdAt: item.createdAt,
+                    isDemoFallback: false
+                )
+            }
+            persist()
+            persistInspirations()
+        } catch {
+            syncErrorMessage = error.localizedDescription
+        }
+    }
+
     func advance(_ projectID: UUID) {
         guard let index = projects.firstIndex(where: { $0.id == projectID }) else { return }
         let nextStage: ProjectStage
@@ -211,6 +305,17 @@ final class AppStore: ObservableObject {
 
     func conversation(for projectID: UUID) -> PawnConversation? {
         pawnConversations.first { $0.projectID == projectID }
+    }
+
+    func remoteConversationID(for projectID: UUID) -> UUID? {
+        remoteConversationIDs[projectID]
+    }
+
+    func setRemoteConversationID(_ conversationID: UUID, for projectID: UUID) {
+        remoteConversationIDs[projectID] = conversationID
+        if let data = try? JSONEncoder().encode(remoteConversationIDs) {
+            defaults.set(data, forKey: remoteConversationIDsKey)
+        }
     }
 
     func ensureConversation(for project: CreatorProject) {
@@ -330,15 +435,77 @@ final class AppStore: ObservableObject {
         return capture
     }
 
+    @discardableResult
+    func addInspiration(
+        transcription: String,
+        pawnQAs: [PawnQA] = [],
+        bilibiliPack: BilibiliPack? = nil,
+        projectID: UUID? = nil,
+        privacy: InspirationPrivacy = .privateOnly,
+        isDemoFallback: Bool = false,
+        sourceType: InspirationSourceType = .voice,
+        accessToken: String?
+    ) async throws -> InspirationCapture {
+        guard let accessToken else {
+            return addInspiration(
+                transcription: transcription,
+                pawnQAs: pawnQAs,
+                bilibiliPack: bilibiliPack,
+                projectID: projectID,
+                privacy: privacy,
+                isDemoFallback: isDemoFallback
+            )
+        }
+
+        let remote = try await InspirationAPI.create(
+            accessToken: accessToken,
+            content: transcription,
+            sourceType: sourceType,
+            projectIDs: projectID.map { [$0] } ?? []
+        )
+        let capture = InspirationCapture(
+            id: remote.id,
+            transcription: remote.content,
+            pawnQAs: pawnQAs,
+            bilibiliPack: bilibiliPack,
+            projectID: remote.projects.first?.id,
+            privacy: privacy,
+            createdAt: remote.createdAt,
+            isDemoFallback: isDemoFallback
+        )
+        inspirations.removeAll { $0.id == capture.id }
+        inspirations.insert(capture, at: 0)
+        persistInspirations()
+        return capture
+    }
+
     func deleteInspiration(_ id: UUID) {
         inspirations.removeAll { $0.id == id }
         persistInspirations()
+    }
+
+    func deleteInspiration(_ id: UUID, accessToken: String?) async throws {
+        if let accessToken {
+            try await InspirationAPI.delete(id, accessToken: accessToken)
+        }
+        deleteInspiration(id)
     }
 
     func assignInspiration(_ id: UUID, toProject projectID: UUID) {
         guard let index = inspirations.firstIndex(where: { $0.id == id }) else { return }
         inspirations[index].projectID = projectID
         persistInspirations()
+    }
+
+    func assignInspiration(_ id: UUID, toProject projectID: UUID, accessToken: String?) async throws {
+        if let accessToken {
+            _ = try await InspirationAPI.update(
+                id,
+                accessToken: accessToken,
+                projectIDs: [projectID]
+            )
+        }
+        assignInspiration(id, toProject: projectID)
     }
 
     func updateInspirationPrivacy(_ id: UUID, privacy: InspirationPrivacy) {

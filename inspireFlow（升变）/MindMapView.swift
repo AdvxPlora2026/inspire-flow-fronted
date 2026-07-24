@@ -47,12 +47,19 @@ struct MindMapView: View {
                 .manyBody(strength: -70)
                 .center()
                 .link(originalLength: 68.0)
+                .collide(
+                    radius: .varied { nodeID in
+                        guard let node = graph.nodes.first(where: { $0.id == nodeID }) else { return 24 }
+                        return Double(node.kind.radius) + 16
+                    }
+                )
             }
             .graphOverlay { proxy in
                 Rectangle()
                     .fill(.clear)
                     .contentShape(Rectangle())
                     .withGraphDragGesture(proxy, of: String.self)
+                    .withGraphMagnifyGesture(proxy)
             }
             .padding(ShengbianMetrics.pageMargin)
         }

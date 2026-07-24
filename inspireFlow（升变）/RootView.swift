@@ -13,7 +13,7 @@ struct RootView: View {
             } else if !session.isAuthenticated {
                 LoginView()
                     .transition(.opacity)
-            } else if session.role == .creator && session.needsCreatorProfileSetup {
+            } else if session.role == .creator && session.needsCreatorProfileSetup && !session.isDemoMode {
                 CreatorProfileSetupView(mode: .registration)
                     .transition(.opacity)
             } else {

@@ -14,7 +14,7 @@ struct ClientMainView: View {
                 .tag(ClientTab.briefs)
 
             NavigationStack { ClientMessagesView() }
-                .tabItem { Label("消息", systemImage: "bubble.left.and.bubble.right.fill") }
+                .tabItem { Label("需求助手", systemImage: "sparkles") }
                 .tag(ClientTab.messages)
 
             NavigationStack { AccountView() }

@@ -26,12 +26,21 @@ final class RingManager: ObservableObject {
     @Published private(set) var batteryPercent: Int?
     @Published private(set) var lastEventDescription: String?
 
-    /// Emits whenever the ring signals a capture gesture (key double press or double tap).
+    /// Whether an `InspirationRecordView` capture sheet is currently on screen,
+    /// regardless of which screen presented it. Shared so a ring gesture never
+    /// tries to present a second sheet on top of an already-open one.
+    @Published var isCapturePresented = false
+
+    /// Double-click opens capture from anywhere in the creator workspace.
     let captureSignal = PassthroughSubject<Void, Never>()
+
+    /// Single-click controls the active capture session without opening UI by itself.
+    let primaryActionSignal = PassthroughSubject<Void, Never>()
 
     private let savedIdentifierKey = "ring.peripheralIdentifier"
     private var client: RingSoundClient?
     private var eventTask: Task<Void, Never>?
+    private var lastCaptureEventAt: Date?
 
     var isConnected: Bool { state == .connected }
 
@@ -58,7 +67,15 @@ final class RingManager: ObservableObject {
             do {
                 let saved = savedIdentifier
                 let devices = try await scanRings(identifier: saved, timeout: 20)
-                guard let device = devices.first,
+                let match: BLEDeviceInfo?
+                if saved != nil {
+                    match = devices.first
+                } else {
+                    match = devices
+                        .filter { ($0.name ?? "").localizedCaseInsensitiveContains("ring") }
+                        .max { ($0.rssi ?? Int.min) < ($1.rssi ?? Int.min) }
+                }
+                guard let device = match,
                       let identifier = UUID(uuidString: device.address) else {
                     state = .failed("未发现戒指")
                     return
@@ -126,24 +143,31 @@ final class RingManager: ObservableObject {
         eventTask = Task { [weak self] in
             await withTaskGroup(of: Void.self) { group in
                 group.addTask {
-                    await self?.loop(
+                    await self?.captureLoop(
                         client,
                         awaiting: { _ = try await $0.waitForKeyDoublePressEvent(timeout: 30) },
                         label: "戒指按键双击"
                     )
                 }
                 group.addTask {
-                    await self?.loop(
+                    await self?.captureLoop(
                         client,
                         awaiting: { _ = try await $0.waitForDoubleTapEvent(timeout: 30) },
                         label: "戒指双击"
+                    )
+                }
+                group.addTask {
+                    await self?.primaryActionLoop(
+                        client,
+                        awaiting: { _ = try await $0.waitForKeySinglePressEvent(timeout: 30) },
+                        label: "戒指单击"
                     )
                 }
             }
         }
     }
 
-    private func loop(
+    private func captureLoop(
         _ client: RingSoundClient,
         awaiting event: @escaping (RingSoundClient) async throws -> Void,
         label: String
@@ -163,7 +187,33 @@ final class RingManager: ObservableObject {
         }
     }
 
+    private func primaryActionLoop(
+        _ client: RingSoundClient,
+        awaiting event: @escaping (RingSoundClient) async throws -> Void,
+        label: String
+    ) async {
+        while !Task.isCancelled {
+            do {
+                try await event(client)
+                guard !Task.isCancelled else { return }
+                lastEventDescription = label
+                primaryActionSignal.send()
+            } catch is CancellationError {
+                return
+            } catch {
+                if Task.isCancelled { return }
+                try? await Task.sleep(for: .milliseconds(300))
+            }
+        }
+    }
+
     private func fireCapture(_ label: String) {
+        let now = Date()
+        if let lastCaptureEventAt,
+           now.timeIntervalSince(lastCaptureEventAt) < 0.75 {
+            return
+        }
+        lastCaptureEventAt = now
         lastEventDescription = label
         captureSignal.send()
     }

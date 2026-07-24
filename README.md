@@ -1,183 +1,159 @@
-# inspire-flow-fronted
+# inspireFlow
 
-> **从指尖捕捉灵感，在耳边完成创作，让每一段记忆始终归用户所有。**
+> Capture ideas without breaking the moment, develop them with PAWN, and carry creative work from inspiration to delivery.
 
-inspireFlow 是一套面向 B 站创作者的 AI 制片助理。通过智能戒指触发意图、耳机捕捉语音、PAWN（AI 制片引擎）维持创作上下文，它把现场零散灵感逐步整理成可拍摄、可发布的完整视频方案。
+inspireFlow is a SwiftUI workspace for creators and brands. It combines voice-first inspiration capture, persistent AI conversations, project organization, teleprompting, and commercial collaboration in one iOS experience. A Zilo smart ring can trigger capture without requiring the creator to reach for the screen.
 
----
+The app uses the production inspireFlow backend at [platform.advx.uk](https://platform.advx.uk) and keeps a local demo mode for hackathon presentations.
 
-## 项目背景
+## Product Flow
 
-创作者并不总是在桌前产生灵感。真正有价值的选题和观察，经常出现在行走途中、活动现场、与人交谈时——那些「不适合拿出手机」的时刻。
-
-传统做法是停下当前行为，找到应用，手动记录。这不仅打断状态，还容易丢失语境和情绪。
-
-**inspireFlow 要解决的不是「语音记笔记」，而是从现场灵感到可执行视频项目之间的一整条断层。**
-
----
-
-## 完整创作流程
-
-```
-现场灵感 → 戒指表达意图 → 耳机承载表达 → PAWN 追问补全上下文
-         → 生成视频方案（大纲 / 分镜 / 脚本 / 提词稿 / 拍摄清单）
-         → 戒指控制提词拍摄 → 发布到 B 站
-         → 商业委托项目通过 Injective 完成结算
+```text
+Idea in the moment
+    -> ring or on-screen capture
+    -> voice transcription and inspiration record
+    -> PAWN follow-up conversation
+    -> project and production materials
+    -> teleprompter, export, or brand delivery
+    -> Injective-backed commercial proof and settlement
 ```
 
----
+## Current Features
 
-## 核心功能
+### Creator Workspace
 
-### 1. 无屏捕捉灵感
+- Capture and retain inspirations from anywhere in the app.
+- Organize inspirations into persistent projects.
+- Continue a project-specific PAWN conversation backed by the remote Agent API.
+- View project structure as an interactive mind map with collision handling and pinch zoom.
+- Generate and use Bilibili-oriented production packs containing a hook, outline, and shot list.
+- Run a full-screen teleprompter with adjustable type and automatic section progression.
+- Export generated production material through the iOS share sheet.
+- Scan, connect, inspect, and disconnect a Zilo ring from the device screen.
 
-创作者在走路、拍摄、交谈时突然有了想法：
+### Brand Workspace
 
-| 步骤 | 行为 |
-|------|------|
-| 触发 | 双击 Zilo 智能戒指，唤醒 PAWN |
-| 捕捉 | 通过戒指麦克风或 viaim 耳机说出灵感 |
-| 追问 | PAWN 在耳机中提出至少 3 轮追问，补全目标观众、视频格式、隐私级别等信息 |
-| 确认 | 通过戒指手势完成确认、取消或标记私密 |
+- Create commercial briefs with requirements, budget context, and a deadline.
+- Persist briefs as remote projects before reporting success.
+- Review commercial projects from the brand dashboard.
+- Open a project-scoped PAWN conversation from the messages workspace.
+- See where Injective escrow, artifact proof, authorization, and settlement belong in the commercial lifecycle.
 
-整个过程无需看屏幕、无需打字。
+### Account Modes
 
-### 2. PAWN：AI 制片引擎
+- Real accounts authenticate against the production API and store bearer tokens in Keychain.
+- Cached sessions survive temporary backend outages and are invalidated only after a confirmed unauthorized response.
+- Demo credentials `123` / `123` open a local-only sandbox.
+- Demo users can switch between creator and brand roles and reset sample data.
+- Demo-only controls are never shown to real users.
 
-PAWN 不只是转录，而是像一个真正的制片人那样推进项目：
+## Registration and Profiles
 
-| 阶段 | 产出 |
-|------|------|
-| 选题 | 标题候选、三秒开场钩子 |
-| 大纲 | 可编辑的章节与段落顺序 |
-| 分镜 | 编号镜头卡片，含画面描述、台词、建议时长和拍摄提示 |
-| 脚本 | 旁白、对白、画面提示、音效的结构化文稿 |
-| 提词稿 | 可直接在拍摄中使用的滚动提词文本 |
-| 拍摄清单 | 按场景归类的镜头、设备、道具和人员清单 |
-| 发布材料 | 视频简介、章节时间轴、封面文案、评论区互动问题 |
+Role selection currently happens in the iOS registration interface because the backend user schema does not contain a creator/brand role field.
 
-### 3. PAWN 项目工作区
+The current onboarding behavior is:
 
-创作者可在 App 内继续修改 PAWN 生成的结果：
+| Selected role | After registration | Persistence |
+| --- | --- | --- |
+| Creator | Opens a creator profile form for display name, biography, content focus, collaboration availability, social accounts, contact methods, and visibility preferences | Core profile fields are sent to `PATCH /api/v1/users/me/profile`; richer workshop fields remain local until the Workshop API is wired |
+| Brand | Enters the brand workspace directly | The backend exposes Brand create/update/member APIs, but brand profile creation is not yet part of iOS registration |
 
-- 每个项目保持独立、持续的创作上下文
-- 支持对话式修改大纲、分镜方向和脚本语气
-- 所有修改生成明确的作品版本，便于提交与回退
+Creator profile completion can be skipped and resumed from Account. Demo users skip profile onboarding entirely.
 
-### 4. 提词器与拍摄控制
+The intended next onboarding step for brands is to create or join a backend Brand after account registration, then collect the brand name, description, website, and logo. This is supported by the backend contract but is not yet implemented in the app.
 
-拍摄时，戒指变成提词器遥控器：
+## Injective Commercial Flow
 
-- **下一句 / 重复当前句 / 暂停滚动** — 全部通过戒指手势无线控制
-- **全屏提词**：纯黑背景、高对比白字、可调滚动速度与字号、支持镜像模式
-- 滚动平稳，尊重「减少动态效果」辅助功能设置
+The production API includes a real commercial-task lifecycle backed by the Injective service. This capability is specific to commercial tasks; ordinary inspirations and projects are not automatically written on-chain.
 
-### 5. 隐私与数据所有权
+### Available Backend Operations
 
-- 所有内容 **加密存储在本地**
-- 内容哈希和授权状态写入 **Injective 测试网**（链上存证，不可篡改）
-- 每条灵感可单独设置隐私级别
-- 权限申请仅在需要时触发，不使用诱导性授权文案
+| Stage | Endpoint | Chain-visible result |
+| --- | --- | --- |
+| Create and fund task | `POST /api/v1/commercial-tasks` | Creates a task with a project, budget, deadline, and participant splits; records escrow funding |
+| Submit work | `POST /api/v1/commercial-tasks/{task_id}/submissions` | Records an artifact ID, SHA-256 digest, and delivery URL |
+| Authorize | `POST /api/v1/commercial-tasks/{task_id}/authorize` | Activates delivery authorization |
+| Settle | `POST /api/v1/commercial-tasks/{task_id}/settle` | Releases settlement according to the configured splits |
+| Read proof | `GET /api/v1/commercial-tasks/{task_id}/proof` | Returns the task, submissions, and chain transactions |
 
-### 6. 商业结算（Injective）
+Chain transaction records may expose:
 
-品牌委托和多人协作项目通过 Injective 链上完成：
+- action and status (`prepared`, `broadcast`, `confirmed`, or `failed`)
+- network and chain ID
+- transaction hash and explorer URL
+- artifact SHA-256 digest
+- amount and denomination
+- submission and confirmation timestamps
+- retryability and failure reason
 
-- 预算托管
-- 授权确认
-- 协作者自动分账
+### iOS Integration Status
 
----
+The app currently exposes the Injective lifecycle in commercial brief and project UI, but does not yet call the commercial-task endpoints. Creating a brand brief creates a cloud project only; it does not claim that escrow has been funded or that a transaction has been confirmed.
 
-## 设计语言
+A commercial task cannot be created safely until the app has collected a creator or participant identifier and valid split values totaling the intended allocation. Once a task ID is attached to a project, the project detail screen can replace its informational state with live transaction status, hashes, proof records, and explorer links.
 
-inspireFlow 的视觉和交互遵循统一的设计准则：
+## Production API Integration
 
-| 原则 | 具体实现 |
-|------|----------|
-| **纯黑白层级** | 近黑背景、白色文字、半透明玻璃卡片，所有层级仅通过透明度和明暗表达 |
-| **白底黑字主按钮** | 主要操作使用白色背景 + 黑色文字，不依赖颜色传递状态 |
-| **系统字体与 SF Symbols** | 无自定义字体，图标与文字共同表达状态与功能 |
-| **克制动画** | 所有动效轻量克制，尊重「减少动态效果」系统设置；提词器滚动从不在阅读时触发动画 |
-| **20pt 水平边距** | 全应用统一内容边距 |
-| **无障碍优先** | 设备状态变化有 VoiceOver 公告，完整 Dynamic Type 适配，键盘导航，频繁开关提供触觉反馈 |
-| **不以红色为唯一警示** | 删除、解绑等破坏性操作通过文字、图标和确认对话框共同表达 |
+The app currently integrates these backend surfaces:
 
----
+- registration, login, logout, and current-session validation
+- current-user profile read and update
+- project create, list, read, update, and delete wrappers
+- inspiration create, list, read, update, delete, and project-link wrappers
+- persistent Agent conversations and messages
+- transcription upload and polling wrappers
 
-## 界面模块（28 个）
+The production API also provides these surfaces, which are not fully represented in the current iOS UI:
 
-完整设计规范见 [`TODO.md`](./TODO.md)
+- commercial task submission, authorization, settlement, and proof
+- brand creation, membership, and invitations
+- creator discovery, follows, interests, and creator inbox
+- creator Workshop editing, preview, publishing, contacts, social accounts, project selection, and brand authorization
+- user memory management
+- streamed Agent responses over server-sent events
 
-| # | 模块 | 说明 |
-|---|------|------|
-| 1 | 蓝牙戒指配对 | 设备搜索 → 戒指识别 → 配对确认 → 连接进度 → 成功 / 未找到 / 断连重试 |
-| 2 | 项目详情与进度 | 名称、阶段、进度、最近活动、大纲 / 分镜 / 脚本 / 提词稿快捷入口 |
-| 3 | PAWN 项目工作区 | 每项目独立对话上下文，支持持续修改创作结果 |
-| 4 | 灵感录音与实时转写 | 录音状态、等宽数字计时、转写文本、暂停 / 继续 / 结束 / 取消 |
-| 5 | 灵感详情 | 原文、录音、转写、隐私状态、AI 摘要、标签、关联项目、编辑 / 删除 |
-| 6 | 灵感归属项目 | 搜索并选择项目、新建项目、不关联，选中态白底黑字 + 勾选图标 |
-| 7 | 大纲编辑 | 章节增删、拖动排序、折叠、PAWN 建议、接受建议、撤销 |
-| 8 | 分镜编辑 | 镜头编号卡片、画面描述、台词时长、新增 / 复制 / 排序、列表 / 紧凑视图 |
-| 9 | 脚本与提词稿编辑 | 旁白 / 对白 / 画面提示 / 音效结构编辑，字号间距、版本切换、提词入口 |
-| 10 | 版本历史 | 大纲 / 分镜 / 脚本历史、差异预览（粗细 / 删除线 / 图标 / 明暗）、恢复 / 副本 |
-| 11 | 拍摄清单 | 按场景 / 拍摄日展示镜头设备道具，勾选 / 筛选 / 排序，离线可用 |
-| 12 | 提词器 | 全屏纯黑高对比，播放 / 暂停 / 速度 / 字号 / 行距 / 镜像 / 快速定位 |
-| 13 | 素材导入与附件管理 | PhotosUI、fileImporter、相机、录音导入，上传状态 / 大小 / 类型 |
-| 14 | 发布材料预览与导出 | 标题 / 简介 / 封面 / 章节 / 字幕 / 清单集中预览，复制 / 分享 / 导出 |
-| 15 | 耳机设备管理 | 音频输入输出设备、连接状态、电量、麦克风测试、切换入口 |
-| 16 | 戒指设备管理 | 配对 / 连接 / 电量 / 固件 / 手势设置 / 查找 / 重连 / 解绑（需确认） |
-| 17 | 戒指手势设置 | 单击 / 双击 / 三击映射，动作选择（捕捉 / 确认 / 暂停 / 自定义），冲突提示 |
-| 18 | 通知设置 | 创作提醒 / PAWN 回复 / 设备断连 / 拍摄计划 / 进度更新，系统权限跳转 |
-| 19 | 隐私与授权 | 麦克风 / 蓝牙 / 照片 / 文件 / 通知 / 本地网络权限，本地加密说明，数据删除 |
-| 20 | 个人资料 | 圆形头像、名称、创作者简介、灵感与项目统计（等宽数字） |
-| 21 | 通用设置 | 外观 / 语言 / 字号 / 触觉 / 默认内容类型 / 创作目标 / 存储缓存 / 帮助 / 关于 |
-| 22 | 搜索与筛选 | 跨灵感 / 项目 / 对话 / 成果搜索，按类型 / 时间 / 状态 / 隐私筛选 |
-| 23 | 全局活动与通知中心 | 按时间展示所有事件，已读 / 筛选 / 直接跳转对应上下文 |
-| 24 | 空状态 | 无灵感 / 无项目 / 无消息 / 无素材 / 无搜索结果，SF Symbol + 白底黑字操作按钮 |
-| 25 | 加载与生成状态 | 骨架屏、ProgressView、生成进度、设备连接等待，可取消 / 重试 |
-| 26 | 错误与离线状态 | 断网 / 服务不可用 / 生成失败 / 存储失败 / 内容损坏，原因 + 影响 + 重试 |
-| 27 | 权限拒绝状态 | 每种权限的独立说明页，解释影响的功能并引导前往系统设置 |
-| 28 | 设备断连与重连 | 非阻塞横幅提示，最近状态 / 自动重连进度 / 手动重试 / 更换设备 |
+## Data and Trust Model
 
----
+- Real bearer tokens are stored in Keychain.
+- Projects, inspirations, PAWN history, role selection, and UI overlays retain a local `UserDefaults` cache for resilience and demo support.
+- The app does not currently claim that all cached content is encrypted at rest.
+- Remote mutations report success only after the backend confirms them.
+- Failed inspiration uploads preserve a clearly marked local fallback.
+- Original creative content is not automatically placed on-chain. Commercial proof uses artifact digests, authorization state, and settlement transactions.
 
-## 技术栈
+## Smart Ring
 
-| 层级 | 技术 |
-|------|------|
-| UI | SwiftUI |
-| 蓝牙 | CoreBluetooth（戒指通信） |
-| 音频 | AVFoundation（录音与播放） |
-| 数据持久化 | 本地加密存储 |
-| 链上存证 | Injective 测试网（内容哈希 + 授权状态） |
-| 戒指 SDK | Python（Bleak），位于 `RingSDK/` 目录 |
+The repository includes a native Swift RingSound client and a Python SDK reference under `RingSDK/`.
 
----
+Current iOS behavior supports scanning, connection state, battery display, reconnecting to a saved device, and global capture triggers from double-tap or double-press events. The broader gesture vocabulary for recording, confirmation, cancellation, and privacy selection remains planned rather than presented as complete.
 
-## 项目结构
+## Technology
 
-```
-inspireFlow/
-├── inspireFlowApp.swift         # 应用入口（含引导流程控制）
-├── ContentView.swift            # 主导航 TabView
-├── startPage.swift              # 首次引导页
-├── new.swift                    # 新建项目页面
-├── RingSDK/                     # Python 戒指通信 SDK
-│   ├── ring_sound.py            # BLE 发现 / 连接 / 指令 / 音频操作
-│   ├── pawn_demo.py             # PAWN 交互演示
-│   └── protocol.md              # 戒指通信协议文档
-├── skills/                      # iOS 设计规范 Skill 参考
-├── Assets.xcassets/             # 应用图标与素材
-├── MVP.md                       # MVP 产品定义
-├── newIDEA.md                   # 完整项目方案文档
-├── Agent.md                     # Agent 行为指令
-├── TODO.md                      # 28 个模块界面实现清单
-└── README.md                    # 本文件
-```
+| Layer | Technology |
+| --- | --- |
+| App UI | SwiftUI |
+| Networking | URLSession, async/await, multipart upload |
+| Authentication | Bearer sessions with Keychain token storage |
+| Bluetooth | CoreBluetooth and the local RingSound client |
+| Audio contract | Backend transcription jobs; full AVFoundation recorder wiring remains in progress |
+| Graph visualization | Grape |
+| AI collaboration | Persistent PAWN/Agent conversations |
+| Commercial infrastructure | Injective-backed backend commercial-task API |
 
----
+## Repository Guide
 
-## Tag
+| Path | Purpose |
+| --- | --- |
+| `inspireFlow（升变）/` | SwiftUI application and API clients |
+| `inspireFlow（升变）/RingSound/` | Native smart-ring transport and protocol implementation |
+| `inspireFlow（升变）/RingSDK/` | Python ring SDK reference and protocol documentation |
+| `BACKEND-HANDOFF.md` | Detailed frontend/backend product contract |
+| `FRONTEND-HANDOFF.md` | Frontend implementation handoff |
+| `TODO.md` | Product and interface backlog |
+| `TODO-RING-SDK.md` | Ring integration backlog |
 
-`adventurex2026` — AdventureX 2026 黑客马拉松参赛作品。
+## Hackathon Scope
+
+inspireFlow is an AdventureX 2026 hackathon project. The implementation favors a complete, demonstrable path through capture, PAWN collaboration, project creation, brand briefs, and production tools while keeping unfinished remote or on-chain operations visibly honest.
+
+Tag: `adventurex2026`

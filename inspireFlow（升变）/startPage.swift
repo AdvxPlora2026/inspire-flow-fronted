@@ -293,11 +293,11 @@ private struct OnboardingPage: Identifiable {
             id: 2,
             eyebrow: "第三步：拿到成品包",
             title: "标题、钩子、大纲、分镜",
-            detail: "三问结束，PAWN 生成一份完整的 Bilibili 创作方案：标题、3 秒钩子、章节大纲和可拍摄分镜。商业项目还自动进入结算流程。",
+            detail: "三问结束，PAWN 生成一份完整的 Bilibili 创作方案：标题、3 秒钩子、章节大纲和可拍摄分镜。商业项目可在确认参与方与分账后进入 Injective 保障流程。",
             symbol: "arrow.up.forward.circle.fill",
             features: [
                 "生成 Bilibili 发布材料",
-                "商业项目链上结算凭证"
+                "商业任务可验证链上凭证"
             ]
         )
     ]

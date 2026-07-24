@@ -8,6 +8,7 @@ struct AccountView: View {
     @State private var isConfirmingSignOut = false
     @State private var isEditingCreatorProfile = false
     @State private var isShowingGuide = false
+    @State private var guideCompletion = false
     @State private var isConfirmingReset = false
 
     var body: some View {
@@ -38,13 +39,16 @@ struct AccountView: View {
                         }
                     }
 
-                    Button {
-                        session.switchRole()
-                    } label: {
-                        Label("切换为\(session.role == .creator ? "品牌方" : "创作者")", systemImage: "arrow.triangle.2.circlepath")
+                    if session.isDemoMode {
+                        Button {
+                            session.switchRole()
+                        } label: {
+                            Label("切换为\(session.role == .creator ? "品牌方" : "创作者")", systemImage: "arrow.triangle.2.circlepath")
+                        }
                     }
 
-                    Label("本地内容已加密", systemImage: "lock.fill")
+                    Label(session.isDemoMode ? "演示模式 — 数据仅保存在本机" : "本机缓存已启用", systemImage: session.isDemoMode ? "exclamationmark.shield" : "internaldrive")
+                        .foregroundStyle(session.isDemoMode ? .orange : .secondary)
                 }
 
                 Section {
@@ -95,10 +99,12 @@ struct AccountView: View {
                         Label("重新查看产品引导", systemImage: "questionmark.circle")
                     }
 
-                    Button(role: .destructive) {
-                        isConfirmingReset = true
-                    } label: {
-                        Label("重置演示数据", systemImage: "arrow.counterclockwise")
+                    if session.isDemoMode {
+                        Button(role: .destructive) {
+                            isConfirmingReset = true
+                        } label: {
+                            Label("重置演示数据", systemImage: "arrow.counterclockwise")
+                        }
                     }
                 }
 
@@ -123,7 +129,7 @@ struct AccountView: View {
             CreatorProfileSetupView(mode: .editing)
         }
         .fullScreenCover(isPresented: $isShowingGuide) {
-            StartView(hasCompletedOnboarding: .constant(true))
+            StartView(hasCompletedOnboarding: $guideCompletion)
                 .overlay(alignment: .topTrailing) {
                     Button {
                         isShowingGuide = false
@@ -134,6 +140,12 @@ struct AccountView: View {
                             .padding(20)
                     }
                     .accessibilityLabel("关闭引导")
+                }
+                .onChange(of: guideCompletion) { _, completed in
+                    if completed {
+                        isShowingGuide = false
+                        guideCompletion = false
+                    }
                 }
         }
     }

@@ -3,9 +3,9 @@ import SwiftUI
 struct CreatorHomeView: View {
     @EnvironmentObject private var appStore: AppStore
     @EnvironmentObject private var session: AppSession
+    @EnvironmentObject private var ring: RingManager
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isCreatingProject = false
-    @State private var isCapturing = false
     @State private var selectedTool: CreatorTool?
 
     var body: some View {
@@ -22,24 +22,28 @@ struct CreatorHomeView: View {
                 .padding(.bottom, 32)
             }
         }
+        .navigationTitle("首页")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                AppBrandMark(compact: true)
-            }
             ToolbarItem(placement: .topBarTrailing) {
-                ShengbianIconButton(symbol: "plus", accessibilityLabel: "新建项目") {
-                    isCreatingProject = true
-                }
+                newProjectButton
             }
         }
         .navigationDestination(isPresented: $isCreatingProject) {
             NewProjectView()
         }
-        .sheet(isPresented: $isCapturing) {
+        .sheet(isPresented: $ring.isCapturePresented) {
             InspirationRecordView()
         }
         .sheet(item: $selectedTool) { tool in
-            CreatorToolSheet(tool: tool)
+            switch tool {
+            case .teleprompter:
+                TeleprompterView()
+            case .export:
+                ExportMaterialsView()
+            case .device:
+                RingDeviceView()
+            }
         }
     }
 
@@ -55,10 +59,34 @@ struct CreatorHomeView: View {
         .padding(.top, 12)
     }
 
+    private var newProjectButton: some View {
+        Button {
+            Haptics.impact(.light)
+            isCreatingProject = true
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "plus")
+                    .font(.system(.subheadline, design: .default, weight: .bold))
+                Text("新建项目")
+                    .font(ShengbianTypography.subheadline.weight(.semibold))
+            }
+            .foregroundStyle(ShengbianColors.primaryText)
+            .padding(.horizontal, 14)
+            .frame(height: 36)
+            .background(.thinMaterial, in: Capsule())
+            .background(ShengbianColors.glassTintStrong, in: Capsule())
+            .overlay {
+                Capsule().strokeBorder(ShengbianColors.glassBorder)
+            }
+        }
+        .shengbianPressable(reduceMotion: reduceMotion)
+        .accessibilityLabel("新建项目")
+    }
+
     private var captureAction: some View {
         Button {
             Haptics.impact(.medium)
-            isCapturing = true
+            ring.isCapturePresented = true
         } label: {
             VStack(spacing: 20) {
                 CaptureSignalMark()
@@ -296,43 +324,5 @@ private enum CreatorTool: String, CaseIterable, Identifiable {
         case .export: "把创作方案与素材整理导出，方便交付或备份。"
         case .device: "连接并管理 Zilo 戒指等外设，随手双击即可捕捉灵感。"
         }
-    }
-}
-
-private struct CreatorToolSheet: View {
-    let tool: CreatorTool
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        ShengbianBackground {
-            VStack(alignment: .leading, spacing: 20) {
-                Image(systemName: tool.symbol)
-                    .font(.system(size: 26, weight: .semibold))
-                    .foregroundStyle(ShengbianColors.inverseText)
-                    .frame(width: 60, height: 60)
-                    .background(ShengbianColors.primaryAction, in: RoundedRectangle(cornerRadius: ShengbianMetrics.controlRadius, style: .continuous))
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(tool.title)
-                        .font(ShengbianTypography.title2)
-                    Text(tool.detail)
-                        .font(ShengbianTypography.subheadline)
-                        .foregroundStyle(ShengbianColors.secondaryText)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Label("即将上线", systemImage: "hammer")
-                    .font(ShengbianTypography.caption)
-                    .foregroundStyle(ShengbianColors.tertiaryText)
-
-                Spacer()
-
-                ShengbianPrimaryButton(title: "知道了", symbol: "checkmark") {
-                    dismiss()
-                }
-            }
-            .padding(ShengbianMetrics.pageMargin)
-        }
-        .presentationDetents([.medium])
     }
 }
