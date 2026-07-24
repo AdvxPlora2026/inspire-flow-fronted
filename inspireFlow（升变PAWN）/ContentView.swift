@@ -64,6 +64,8 @@ struct ContentView: View {
 // MARK: - Inspiration
 
 struct InspirationDemoView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     @State private var isListening = false
     @State private var privacyLevel: PrivacyLevel = .privateOnly
     @State private var capturePhase: CapturePhase = .ready
@@ -85,11 +87,9 @@ struct InspirationDemoView: View {
     ]
 
     var body: some View {
-        DemoPageBackground {
+        ShengbianBackground {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    PawnStatusCard(isListening: isListening)
-
                     captureButton
 
                     captureWorkflowSection
@@ -102,7 +102,7 @@ struct InspirationDemoView: View {
                 .padding(.bottom, 30)
             }
         }
-        .navigationTitle("捕捉灵感")
+        .navigationTitle("接住灵感")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -120,71 +120,78 @@ struct InspirationDemoView: View {
         Button {
             handleCaptureButton()
         } label: {
-            HStack(spacing: 14) {
-                Image(
-                    systemName: isListening
-                        ? "stop.fill"
-                        : "mic.fill"
-                )
-                .font(.title3.weight(.bold))
-                .frame(width: 48, height: 48)
-                .background(
-                    isListening
-                        ? Color.white.opacity(0.18)
-                        : Color.black.opacity(0.08),
-                    in: Circle()
-                )
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(
-                        isListening
-                            ? "结束捕捉"
-                            : "开始捕捉"
+            VStack(spacing: 24) {
+                HStack {
+                    Label(
+                        isListening ? "PAWN 正在聆听" : "PAWN 已准备好",
+                        systemImage: isListening ? "waveform" : "ear"
                     )
-                    .font(.headline)
-
-                    Text(
-                        isListening
-                            ? "PAWN 将保存当前对话"
-                            : "说出脑海中刚刚出现的想法"
-                    )
-                    .font(.caption)
+                    .font(ShengbianTypography.caption)
                     .foregroundStyle(
                         isListening
-                            ? Color.white.opacity(0.72)
-                            : Color.black.opacity(0.62)
+                            ? ShengbianColors.listening
+                            : ShengbianColors.secondaryText
                     )
+
+                    Spacer()
+
+                    Text(isListening ? "正在记录" : "本地私密")
+                        .font(ShengbianTypography.technical)
+                        .foregroundStyle(ShengbianColors.tertiaryText)
                 }
 
-                Spacer()
+                ZStack {
+                    ForEach([1.0, 0.7], id: \.self) { scale in
+                        Circle()
+                            .strokeBorder(
+                                isListening
+                                    ? ShengbianColors.listening.opacity(0.15 + (1 - scale) * 0.15)
+                                    : ShengbianColors.primaryText.opacity(0.08),
+                                lineWidth: 1
+                            )
+                            .frame(width: 156 * scale, height: 156 * scale)
+                    }
 
-                Image(systemName: "chevron.right")
-                    .font(.caption.bold())
+                    Image(systemName: isListening ? "stop.fill" : "mic.fill")
+                        .font(.system(size: 25, weight: .semibold))
+                        .foregroundStyle(
+                            isListening
+                                ? ShengbianColors.listening
+                                : ShengbianColors.inverseText
+                        )
+                        .frame(width: 68, height: 68)
+                        .background(
+                            isListening
+                                ? ShengbianColors.listening.opacity(0.14)
+                                : ShengbianColors.primaryAction,
+                            in: Circle()
+                        )
+                }
+                .frame(height: 156)
+
+                CaptureWaveform(isActive: isListening)
+                    .frame(maxWidth: 250)
+
+                VStack(spacing: 5) {
+                    Text(isListening ? "轻点结束并继续" : "轻点开始说话")
+                        .font(ShengbianTypography.headline)
+                    Text(isListening ? "随后进入三轮 PAWN 追问" : "也可以双击 Zilo 戒指唤醒")
+                        .font(ShengbianTypography.caption)
+                        .foregroundStyle(ShengbianColors.secondaryText)
+                }
             }
-            .foregroundStyle(
-                isListening
-                    ? Color.white
-                    : Color.black
-            )
-            .padding(14)
-            .background {
-                RoundedRectangle(
-                    cornerRadius: 24,
-                    style: .continuous
-                )
-                .fill(
+            .foregroundStyle(ShengbianColors.primaryText)
+            .padding(ShengbianMetrics.cardPadding)
+            .background(.regularMaterial, in: captureShape)
+            .background(ShengbianColors.glassTintStrong, in: captureShape)
+            .overlay {
+                captureShape.strokeBorder(
                     isListening
-                        ? Color.red
-                        : Color.white
+                        ? ShengbianColors.listening.opacity(0.5)
+                        : ShengbianColors.glassBorder,
+                    lineWidth: isListening ? 1.25 : 0.75
                 )
             }
-            .shadow(
-                color: isListening
-                    ? Color.red.opacity(0.24)
-                    : Color.black.opacity(0.2),
-                radius: 18,
-                y: 10
-            )
         }
         .buttonStyle(PressableButtonStyle())
         .accessibilityValue(
@@ -194,6 +201,10 @@ struct InspirationDemoView: View {
         )
     }
 
+    private var captureShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: ShengbianMetrics.cardRadius, style: .continuous)
+    }
+
     @ViewBuilder
     private var captureWorkflowSection: some View {
         switch capturePhase {
@@ -201,13 +212,25 @@ struct InspirationDemoView: View {
             EmptyView()
         case .questioning:
             GlassCard {
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("PAWN 追问 \(questionIndex + 1) / \(productionQuestions.count)")
-                        .font(.caption.monospacedDigit().weight(.semibold))
-                        .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack {
+                        ShengbianStatusLabel(
+                            title: "PAWN 追问",
+                            symbol: "sparkles",
+                            state: .neutral
+                        )
+
+                        Spacer()
+
+                        Text("\(questionIndex + 1) / \(productionQuestions.count)")
+                            .font(ShengbianTypography.technical)
+                            .foregroundStyle(ShengbianColors.secondaryText)
+                            .contentTransition(.numericText())
+                    }
 
                     Text(productionQuestions[questionIndex].prompt)
-                        .font(.headline)
+                        .font(ShengbianTypography.title2)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     Button {
                         answerCurrentQuestion()
@@ -216,11 +239,14 @@ struct InspirationDemoView: View {
                             productionQuestions[questionIndex].answer,
                             systemImage: "waveform"
                         )
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.black)
+                        .font(ShengbianTypography.bodyEmphasized)
+                        .foregroundStyle(ShengbianColors.inverseText)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(13)
-                        .background(Color.white, in: RoundedRectangle(cornerRadius: 14))
+                        .padding(14)
+                        .background(
+                            ShengbianColors.primaryAction,
+                            in: RoundedRectangle(cornerRadius: ShengbianMetrics.controlRadius, style: .continuous)
+                        )
                     }
                     .buttonStyle(PressableButtonStyle())
                     .accessibilityHint("模拟通过耳机回答当前问题")
@@ -249,7 +275,7 @@ struct InspirationDemoView: View {
     }
 
     private func handleCaptureButton() {
-        withAnimation(.spring(response: 0.32, dampingFraction: 0.84)) {
+        withAnimation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.84)) {
             if isListening {
                 isListening = false
                 capturePhase = .questioning
@@ -262,7 +288,7 @@ struct InspirationDemoView: View {
     }
 
     private func answerCurrentQuestion() {
-        withAnimation(.easeOut(duration: 0.18)) {
+        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
             if questionIndex < productionQuestions.count - 1 {
                 questionIndex += 1
             } else {
@@ -325,74 +351,26 @@ struct InspirationDemoView: View {
     }
 }
 
-private struct PawnStatusCard: View {
-    let isListening: Bool
+private struct CaptureWaveform: View {
+    let isActive: Bool
+
+    private let levels: [CGFloat] = [10, 18, 28, 15, 34, 22, 13, 26, 18, 31, 14, 22]
 
     var body: some View {
-        GlassCard {
-            HStack(spacing: 16) {
-                Image(
-                    systemName: isListening
-                        ? "waveform"
-                        : "ear"
-                )
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(
-                    isListening
-                        ? Color.red
-                        : Color.white
-                )
-                .frame(width: 58, height: 58)
-                .background(
-                    isListening
-                        ? Color.red.opacity(0.14)
-                        : Color.white.opacity(0.08),
-                    in: Circle()
-                )
-                .overlay {
-                    Circle()
-                        .strokeBorder(
-                            isListening
-                                ? Color.red.opacity(0.34)
-                                : Color.white.opacity(0.12),
-                            lineWidth: 0.8
-                        )
-                }
-
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(
-                        isListening
-                            ? "PAWN 正在聆听"
-                            : "PAWN 已准备好"
-                    )
-                    .font(.headline)
-
-                    Text(
-                        isListening
-                            ? "说出你的想法，我会继续追问"
-                            : "双击 Zilo 戒指或点击下方按钮"
-                    )
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                Circle()
-                    .fill(
-                        isListening
-                            ? Color.red
-                            : Color.secondary
-                    )
-                    .frame(width: 8, height: 8)
-                    .shadow(
-                        color: isListening
-                            ? Color.red.opacity(0.75)
-                            : Color.clear,
-                        radius: 6
+        HStack(alignment: .center, spacing: 5) {
+            ForEach(Array(levels.enumerated()), id: \.offset) { index, level in
+                Capsule()
+                    .fill(isActive ? ShengbianColors.listening : ShengbianColors.tertiaryText)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: isActive ? level : 4)
+                    .animation(
+                        .easeInOut(duration: 0.24).delay(Double(index) * 0.018),
+                        value: isActive
                     )
             }
         }
+        .frame(height: 38)
+        .accessibilityHidden(true)
     }
 }
 
@@ -537,14 +515,14 @@ struct PawnWorkspaceView: View {
     ]
 
     var body: some View {
-        DemoPageBackground {
+        ShengbianBackground {
             VStack(spacing: 0) {
                 messageList
 
                 composer
             }
         }
-        .navigationTitle("PAWN 工作区")
+        .navigationTitle("PAWN")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
@@ -594,12 +572,12 @@ struct PawnWorkspaceView: View {
             .frame(height: 42)
             .background(
                 .thinMaterial,
-                in: Capsule()
+                in: RoundedRectangle(cornerRadius: ShengbianMetrics.controlRadius, style: .continuous)
             )
             .overlay {
-                Capsule()
+                RoundedRectangle(cornerRadius: ShengbianMetrics.controlRadius, style: .continuous)
                     .strokeBorder(
-                        Color.white.opacity(0.12),
+                        ShengbianColors.glassBorder,
                         lineWidth: 0.8
                     )
             }
@@ -802,28 +780,7 @@ private struct DemoPageBackground<Content: View>: View {
     }
 
     var body: some View {
-        ZStack {
-            Color(
-                red: 0.018,
-                green: 0.018,
-                blue: 0.022
-            )
-            .ignoresSafeArea()
-
-            RadialGradient(
-                colors: [
-                    Color.white.opacity(0.055),
-                    Color.white.opacity(0.012),
-                    Color.clear
-                ],
-                center: .topTrailing,
-                startRadius: 20,
-                endRadius: 460
-            )
-            .ignoresSafeArea()
-
-            content
-        }
+        ShengbianBackground { content }
     }
 }
 
@@ -843,21 +800,12 @@ private struct GlassCard<Content: View>: View {
                 maxWidth: .infinity,
                 alignment: .leading
             )
-            .background(
-                Color.white.opacity(0.055),
-                in: cardShape
-            )
+            .background(.thinMaterial, in: cardShape)
+            .background(ShengbianColors.glassTint, in: cardShape)
             .overlay {
                 cardShape
                     .strokeBorder(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.17),
-                                Color.white.opacity(0.045)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
+                        ShengbianColors.glassBorder,
                         lineWidth: 0.8
                     )
             }
@@ -865,7 +813,7 @@ private struct GlassCard<Content: View>: View {
 
     private var cardShape: RoundedRectangle {
         RoundedRectangle(
-            cornerRadius: 22,
+            cornerRadius: ShengbianMetrics.cardRadius,
             style: .continuous
         )
     }
@@ -907,9 +855,9 @@ private struct IdeaRow: View {
                     .foregroundStyle(.white)
                     .frame(width: 42, height: 42)
                     .background(
-                        Color.white.opacity(0.08),
+                        ShengbianColors.glassTintStrong,
                         in: RoundedRectangle(
-                            cornerRadius: 13,
+                            cornerRadius: ShengbianMetrics.controlRadius,
                             style: .continuous
                         )
                     )
@@ -959,9 +907,9 @@ private struct ResultChip: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
         .background(
-            Color.white.opacity(0.045),
+            ShengbianColors.glassTint,
             in: RoundedRectangle(
-                cornerRadius: 14,
+        cornerRadius: ShengbianMetrics.controlRadius,
                 style: .continuous
             )
         )
@@ -1077,11 +1025,11 @@ private struct TaskContextCard: View {
 
                 Text("进行中")
                     .font(.caption2.weight(.bold))
-                    .foregroundStyle(.green)
+                    .foregroundStyle(ShengbianColors.primaryText)
                     .padding(.horizontal, 9)
                     .padding(.vertical, 5)
                     .background(
-                        Color.green.opacity(0.12),
+                        ShengbianColors.glassTintStrong,
                         in: Capsule()
                     )
             }
@@ -1124,7 +1072,7 @@ private struct MessageBubble: View {
                     ? Color.white.opacity(0.07)
                     : Color.white,
                 in: RoundedRectangle(
-                    cornerRadius: 18,
+                    cornerRadius: ShengbianMetrics.controlRadius,
                     style: .continuous
                 )
             )

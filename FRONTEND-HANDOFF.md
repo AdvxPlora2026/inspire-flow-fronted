@@ -46,6 +46,8 @@ Creator tabs:
 | PAWN | `PawnWorkspaceView` | Existing PAWN demonstration workspace |
 | Account | `AccountView` | Local account, role switch and logout |
 
+Creator project navigation now uses the persisted `CreatorProject.id`. Both the Home current-work card and rows in `CreatorProjectsView` open `ProjectDetailView(projectID:)`, which resolves the latest project value from `AppStore`. The detail screen exposes the existing lifecycle action, creative goal, current-stage activity, PAWN workspace, and artifact entry points. Artifact destinations are actionable local empty states only; they do not represent generated or persisted artifact records.
+
 Brand/client tabs:
 
 | Tab | Root view | Current purpose |
@@ -60,6 +62,10 @@ The creator's future brand-interest inbox must be opened from a visible toolbar 
 ## 4. Current local data
 
 `AppStore` stores `[CreatorProject]` as JSON under `creatorProjects.v1` in `UserDefaults`.
+
+`AppStore` also stores `[PawnConversation]` as JSON under `pawnConversations.v1`. Each conversation has its own opaque ID and persisted `projectID`, structured creator/PAWN messages, completion state, update time, and imported attachment metadata. `ProjectPawnWorkspaceView` resolves the matching conversation by project ID, so messages remain isolated between projects and survive relaunch.
+
+The current PAWN response is a deterministic local demonstration streamed in short text segments. Stop and regenerate mutate the same local conversation; they do not call or imply success from a PAWN backend. Reduce Motion bypasses segmented presentation and writes the complete response immediately. File import uses `fileImporter`, but the current model stores only the selected file's display name and import time. It does not copy, upload, bookmark, or retain access to the selected file contents.
 
 Current `CreatorProject` fields:
 
@@ -77,7 +83,7 @@ Missing first-class frontend models include:
 - Public workshop entry and published artifact reference.
 - Brand profile summary, one-way follow or interest event, and creator contact authorization.
 - Inspiration, recording, transcript, privacy level and project assignment.
-- Project conversation, message, generation job, artifact and artifact version.
+- Generation job, artifact and artifact version. Project conversations, messages, and attachment metadata now have local first-class models, but backend IDs and attachment file persistence are not implemented.
 - Activity, attachment, commercial brief, submission, authorization and transaction record.
 
 Persisted model migrations must be explicit and must preserve existing `creatorProjects.v1` data.

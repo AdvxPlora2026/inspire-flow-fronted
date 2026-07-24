@@ -18,9 +18,7 @@ struct StartView: View {
     private let pages = OnboardingPage.pages
 
     var body: some View {
-        ZStack {
-            background
-
+        ShengbianBackground {
             VStack(spacing: 0) {
                 header
 
@@ -31,8 +29,8 @@ struct StartView: View {
                             isSelected: selectedPage == page.id,
                             reduceMotion: reduceMotion
                         )
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 20)
+                        .padding(.horizontal, ShengbianMetrics.pageMargin)
+                        .padding(.vertical, 18)
                         .tag(page.id)
                     }
                 }
@@ -52,60 +50,18 @@ struct StartView: View {
         pages[selectedPage]
     }
 
-    private var background: some View {
-        ZStack {
-            Color(
-                red: 0.025,
-                green: 0.025,
-                blue: 0.04
-            )
-            .ignoresSafeArea()
-
-            RadialGradient(
-                colors: [
-                    currentPage.accentColor.opacity(0.24),
-                    currentPage.accentColor.opacity(0.07),
-                    Color.clear
-                ],
-                center: .topTrailing,
-                startRadius: 20,
-                endRadius: 520
-            )
-            .ignoresSafeArea()
-            .animation(
-                reduceMotion
-                    ? nil
-                    : .easeOut(duration: 0.28),
-                value: selectedPage
-            )
-
-            RadialGradient(
-                colors: [
-                    Color.purple.opacity(0.13),
-                    Color.clear
-                ],
-                center: .bottomLeading,
-                startRadius: 10,
-                endRadius: 450
-            )
-            .ignoresSafeArea()
-        }
-    }
-
     private var header: some View {
         HStack {
-            Label("inspireFlow", systemImage: "sparkles")
-                .font(.headline.weight(.bold))
-                .foregroundStyle(.white)
+            AppBrandMark(compact: true)
 
             Spacer()
 
             Text("\(selectedPage + 1) / \(pages.count)")
-                .font(.caption.monospacedDigit().weight(.semibold))
-                .foregroundStyle(.white.opacity(0.55))
+                .font(ShengbianTypography.technical)
+                .foregroundStyle(ShengbianColors.secondaryText)
                 .contentTransition(.numericText())
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, ShengbianMetrics.pageMargin)
         .padding(.top, 18)
     }
 
@@ -113,48 +69,18 @@ struct StartView: View {
         VStack(spacing: 20) {
             pageIndicator
 
-            Button {
-                handlePrimaryAction()
-            } label: {
-                HStack(spacing: 10) {
-                    Text(
-                        selectedPage == pages.count - 1
-                            ? "进入 inspireFlow"
-                            : "继续"
-                    )
-                    .font(.headline)
-
-                    Image(
-                        systemName: selectedPage == pages.count - 1
-                            ? "arrow.right"
-                            : "chevron.right"
-                    )
-                    .font(.subheadline.weight(.bold))
-                }
-                .foregroundStyle(
-                    selectedPage == pages.count - 1
-                        ? Color.black
-                        : Color.white
-                )
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background {
-                    Capsule()
-                        .fill(
-                            selectedPage == pages.count - 1
-                                ? Color.white
-                                : currentPage.accentColor
-                        )
-                }
-            }
-            .buttonStyle(OnboardingButtonStyle())
+            ShengbianPrimaryButton(
+                title: selectedPage == pages.count - 1 ? "进入升变" : "继续",
+                symbol: selectedPage == pages.count - 1 ? "arrow.right" : "chevron.right",
+                action: handlePrimaryAction
+            )
             .accessibilityHint(
                 selectedPage == pages.count - 1
                     ? "完成引导并进入主界面"
                     : "前往下一页"
             )
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, ShengbianMetrics.pageMargin)
         .padding(.bottom, 24)
         .animation(
             reduceMotion
@@ -170,7 +96,7 @@ struct StartView: View {
                 Capsule()
                     .fill(
                         selectedPage == page.id
-                            ? currentPage.accentColor
+                            ? Color.white
                             : Color.white.opacity(0.18)
                     )
                     .frame(
@@ -239,27 +165,20 @@ private struct OnboardingCard: View {
 
             VStack(alignment: .leading, spacing: 14) {
                 Text(page.eyebrow)
-                    .font(.caption.weight(.bold))
-                    .tracking(1.4)
-                    .foregroundStyle(page.accentColor)
+                    .font(ShengbianTypography.label)
+                    .foregroundStyle(ShengbianColors.secondaryText)
 
                 Text(page.title)
-                    .font(
-                        .system(
-                            size: 36,
-                            weight: .bold,
-                            design: .rounded
-                        )
-                    )
-                    .foregroundStyle(.white)
+                    .font(ShengbianTypography.display)
+                    .foregroundStyle(ShengbianColors.primaryText)
                     .fixedSize(
                         horizontal: false,
                         vertical: true
                     )
 
                 Text(page.detail)
-                    .font(.title3)
-                    .foregroundStyle(.white.opacity(0.62))
+                    .font(ShengbianTypography.title3)
+                    .foregroundStyle(ShengbianColors.secondaryText)
                     .lineSpacing(6)
                     .fixedSize(
                         horizontal: false,
@@ -277,29 +196,12 @@ private struct OnboardingCard: View {
             maxHeight: .infinity,
             alignment: .leading
         )
-        .background(.ultraThinMaterial, in: cardShape)
+        .background(.regularMaterial, in: cardShape)
+        .background(ShengbianColors.glassTint, in: cardShape)
         .overlay {
             cardShape
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.22),
-                            page.accentColor.opacity(0.18),
-                            Color.white.opacity(0.06)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 0.8
-                )
+            .strokeBorder(ShengbianColors.glassBorder, lineWidth: 0.8)
         }
-        .shadow(
-            color: page.accentColor.opacity(
-                isSelected ? 0.16 : 0.06
-            ),
-            radius: isSelected ? 24 : 14,
-            y: 14
-        )
         .scaleEffect(
             reduceMotion || isSelected
                 ? 1
@@ -316,29 +218,17 @@ private struct OnboardingCard: View {
 
     private var illustration: some View {
         ZStack {
-            Circle()
-                .fill(page.accentColor.opacity(0.13))
-                .frame(width: 154, height: 154)
-
-            Circle()
-                .strokeBorder(
-                    page.accentColor.opacity(0.22),
-                    lineWidth: 1
-                )
-                .frame(width: 122, height: 122)
+            RoundedRectangle(cornerRadius: ShengbianMetrics.cardRadius, style: .continuous)
+                .fill(ShengbianColors.glassTintStrong)
+                .frame(width: 132, height: 132)
+                .overlay {
+                    RoundedRectangle(cornerRadius: ShengbianMetrics.cardRadius, style: .continuous)
+                        .strokeBorder(ShengbianColors.glassBorder)
+                }
 
             Image(systemName: page.symbol)
                 .font(.system(size: 48, weight: .semibold))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [
-                            Color.white,
-                            page.accentColor
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .foregroundStyle(.white)
         }
         .frame(maxWidth: .infinity)
         .accessibilityHidden(true)
@@ -350,11 +240,11 @@ private struct OnboardingCard: View {
                 HStack(spacing: 11) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.subheadline)
-                        .foregroundStyle(page.accentColor)
+                        .foregroundStyle(ShengbianColors.primaryText)
 
                     Text(feature)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.white.opacity(0.82))
+                        .font(ShengbianTypography.subheadline.weight(.medium))
+                        .foregroundStyle(ShengbianColors.primaryText)
                 }
             }
         }
@@ -362,21 +252,9 @@ private struct OnboardingCard: View {
 
     private var cardShape: RoundedRectangle {
         RoundedRectangle(
-            cornerRadius: 32,
+            cornerRadius: ShengbianMetrics.cardRadius,
             style: .continuous
         )
-    }
-}
-
-private struct OnboardingButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .opacity(configuration.isPressed ? 0.86 : 1)
-            .animation(
-                .easeOut(duration: 0.12),
-                value: configuration.isPressed
-            )
     }
 }
 
@@ -386,45 +264,41 @@ private struct OnboardingPage: Identifiable {
     let title: String
     let detail: String
     let symbol: String
-    let accentColor: Color
     let features: [String]
 
     static let pages: [OnboardingPage] = [
         OnboardingPage(
             id: 0,
-            eyebrow: "捕捉灵感",
-            title: "想法出现时，立即留下它",
-            detail: "双击戒指，说出刚刚出现的想法。PAWN 会保留现场语境，并在需要时继续追问。",
+            eyebrow: "第一步：接住灵感",
+            title: "双击戒指，说出来",
+            detail: "灵感出现的那一刻，双击 Zilo 戒指就能开始录音。PAWN 全程本地运行，不需要网络，不打断当下的状态。",
             symbol: "waveform",
-            accentColor: .pink,
             features: [
-                "戒指触发捕捉与确认",
-                "耳机承载表达与私密反馈"
+                "戒指触发，耳机私密反馈",
+                "完全本地，随时可用"
             ]
         ),
         OnboardingPage(
             id: 1,
-            eyebrow: "继续创作",
-            title: "从一句话，到完整作品",
-            detail: "PAWN 会将内容加入对应项目，并逐步生成面向 Bilibili 的大纲、分镜和拍摄清单。",
-            symbol: "wand.and.stars",
-            accentColor: .purple,
+            eyebrow: "第二步：PAWN 三问",
+            title: "三个问题，打开一个方向",
+            detail: "录音结束后，PAWN 会连续问三个问题：目标观众、内容形式、关键开场画面——帮你把一句话变成可执行的创作方向。",
+            symbol: "sparkles",
             features: [
-                "保持完整项目上下文",
-                "整理视频结构与拍摄计划"
+                "语音回答，无需打字",
+                "追问让想法更具体"
             ]
         ),
         OnboardingPage(
             id: 2,
-            eyebrow: "准备发布",
-            title: "让每个想法，继续向前",
-            detail: "完善脚本和交付内容。商业项目还可以确认预算、授权与协作者分账。",
+            eyebrow: "第三步：拿到成品包",
+            title: "标题、钩子、大纲、分镜",
+            detail: "三问结束，PAWN 生成一份完整的 Bilibili 创作方案：标题、3 秒钩子、章节大纲和可拍摄分镜。商业项目还自动进入结算流程。",
             symbol: "arrow.up.forward.circle.fill",
-            accentColor: .blue,
             features: [
                 "生成 Bilibili 发布材料",
-                "清晰管理商业项目状态"
-                            ]
+                "商业项目链上结算凭证"
+            ]
         )
     ]
 }

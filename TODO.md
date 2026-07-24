@@ -1,4 +1,3 @@
-curl -fsSL https://chatgpt.com/codex/install.sh | sh
 
 # inspireFlow Hackathon Execution TODO
 
@@ -23,8 +22,8 @@ Acceptance: a clean install shows the swipeable welcome once, completion opens l
 
 ### Phase 1 - Core project and inspiration loop
 
-- [ ] **Project detail and progress** - Show project name, current stage, overall progress, recent activity, creative goal, and entry points for outline, storyboard, script, and teleprompter artifacts. Use 20pt horizontal margins, continuous-corner glass cards, system fonts, and SF Symbols; distinguish progress through white brightness, line style, icons, and text rather than colored badges.
-- [ ] **PAWN project collaboration** - Give each project an independent conversation context with a project summary card, message list, composer, attachment entry, stop-generation action, and regenerate action. PAWN messages use translucent white cards, user messages use white cards with black text, and the native-material composer supports lightweight streaming output that respects Reduce Motion.
+- [X] **Project detail and progress** - Show project name, current stage, overall progress, recent activity, creative goal, and entry points for outline, storyboard, script, and teleprompter artifacts. Use 20pt horizontal margins, continuous-corner glass cards, system fonts, and SF Symbols; distinguish progress through white brightness, line style, icons, and text rather than colored badges.
+- [X] **PAWN project collaboration** - Give each project an independent conversation context with a project summary card, message list, composer, attachment entry, stop-generation action, and regenerate action. PAWN messages use translucent white cards, user messages use white cards with black text, and the native-material composer supports lightweight streaming output that respects Reduce Motion.
 - [ ] **Inspiration recording and live transcription** - Show recording state, monospaced duration, live transcript, pause, resume, finish, and cancel actions, with clear microphone permission and local-save status. Use a prominent white recording control and restrained waveform that does not depend on color to communicate state; provide complete VoiceOver labels and announcements.
 - [ ] **Inspiration detail** - Show original text, recording, transcript, creation time, privacy state, AI summary, tags, and associated project. Support edit, delete, and move-to-project; use grouped glass cards and a white primary action, with deletion communicated by text, icon, and confirmation rather than red alone.
 - [ ] **Assign inspiration to project** - Let users search and select an existing project, create a project, or leave the inspiration unassigned, with recent and recommended projects. Use native search, a single-choice list, and fixed bottom confirmation; selection uses a white surface, black text, and checkmark while unselected rows remain translucent.
@@ -180,7 +179,6 @@ Acceptance: the judge can independently open and verify the transaction.
 - [ ] Screen recording prepared as backup.
 - [ ] Demo data reset and all secrets excluded from Git.
 - [ ] Run `xcodebuild` and the backend contract tests before submission.
-
 
 ### 额外想法
 

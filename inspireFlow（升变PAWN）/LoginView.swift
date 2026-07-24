@@ -12,27 +12,21 @@ struct LoginView: View {
     @FocusState private var focusedField: Field?
 
     var body: some View {
-        ZStack {
-            Color(red: 0.025, green: 0.027, blue: 0.032)
-                .ignoresSafeArea()
-
-            Circle()
-                .fill(Color.cyan.opacity(0.12))
-                .frame(width: 360, height: 360)
-                .blur(radius: 80)
-                .offset(x: 170, y: -310)
-                .accessibilityHidden(true)
-
+        ShengbianBackground {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
                     brandHeader
                     rolePicker
-                    credentialsForm
-                    primaryButton
+                    ShengbianGlassCard(emphasis: .prominent) {
+                        VStack(spacing: 16) {
+                            credentialsForm
+                            primaryButton
+                        }
+                    }
                     modeButton
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 44)
+                .padding(.horizontal, ShengbianMetrics.pageMargin)
+                .padding(.top, 32)
                 .padding(.bottom, 32)
             }
             .scrollDismissesKeyboard(.interactively)
@@ -42,25 +36,22 @@ struct LoginView: View {
 
     private var brandHeader: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Image(systemName: "sparkles")
-                .font(.title2.weight(.bold))
-                .foregroundStyle(.black)
-                .frame(width: 48, height: 48)
-                .background(Color.white, in: RoundedRectangle(cornerRadius: 12))
+            AppBrandMark()
+                .padding(.bottom, 12)
 
             Text(isCreatingAccount ? "创建你的工作空间" : "欢迎回来")
-                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .font(ShengbianTypography.display)
+                .contentTransition(.opacity)
 
-            Text("登录后继续管理灵感、商业委托和创作交付。")
-                .font(.body)
-                .foregroundStyle(.secondary)
+            Text(isCreatingAccount ? "选择身份，让 PAWN 从你的第一条灵感开始。" : "回到你的灵感、项目和创作上下文。")
+                .shengbianBodyText(secondary: true)
         }
     }
 
     private var rolePicker: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("你的身份")
-                .font(.headline)
+                .font(ShengbianTypography.headline)
 
             HStack(spacing: 10) {
                 ForEach(UserRole.allCases) { role in
@@ -69,28 +60,29 @@ struct LoginView: View {
                             selectedRole = role
                         }
                     } label: {
-                        VStack(alignment: .leading, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 12) {
                             Image(systemName: role.symbol)
-                                .font(.headline)
+                                .font(.title3.weight(.semibold))
 
                             Text(role.title)
-                                .font(.subheadline.weight(.bold))
+                                .font(ShengbianTypography.headline)
 
                             Text(role.detail)
-                                .font(.caption)
-                                .foregroundStyle(selectedRole == role ? Color.black.opacity(0.62) : .secondary)
+                                .font(ShengbianTypography.caption)
+                                .foregroundStyle(selectedRole == role ? ShengbianColors.inverseText.opacity(0.62) : ShengbianColors.secondaryText)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
-                        .foregroundStyle(selectedRole == role ? Color.black : Color.white)
-                        .frame(maxWidth: .infinity, minHeight: 116, alignment: .leading)
+                        .foregroundStyle(selectedRole == role ? ShengbianColors.inverseText : ShengbianColors.primaryText)
+                        .frame(maxWidth: .infinity, minHeight: 124, alignment: .leading)
                         .padding(14)
                         .background(
-                            selectedRole == role ? Color.white : Color.white.opacity(0.055),
-                            in: RoundedRectangle(cornerRadius: 8)
+                            selectedRole == role ? ShengbianColors.primaryAction : ShengbianColors.glassTint,
+                            in: RoundedRectangle(cornerRadius: ShengbianMetrics.cardRadius, style: .continuous)
                         )
+                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: ShengbianMetrics.cardRadius, style: .continuous))
                         .overlay {
-                            RoundedRectangle(cornerRadius: 8)
-                                .strokeBorder(Color.white.opacity(selectedRole == role ? 0 : 0.12))
+                            RoundedRectangle(cornerRadius: ShengbianMetrics.cardRadius, style: .continuous)
+                                .strokeBorder(selectedRole == role ? Color.clear : ShengbianColors.glassBorder)
                         }
                     }
                     .buttonStyle(.plain)
@@ -133,20 +125,11 @@ struct LoginView: View {
     }
 
     private var primaryButton: some View {
-        Button(action: submit) {
-            HStack {
-                Text(isCreatingAccount ? "创建并进入" : "登录")
-                    .font(.headline)
-                Spacer()
-                Image(systemName: "arrow.right")
-                    .font(.subheadline.weight(.bold))
-            }
-            .foregroundStyle(.black)
-            .padding(.horizontal, 18)
-            .frame(height: 54)
-            .background(Color.white, in: RoundedRectangle(cornerRadius: 8))
-        }
-        .buttonStyle(.plain)
+        ShengbianPrimaryButton(
+            title: isCreatingAccount ? "创建并进入" : "登录",
+            symbol: "arrow.right",
+            action: submit
+        )
     }
 
     private var modeButton: some View {
@@ -155,10 +138,10 @@ struct LoginView: View {
             hasAttemptedSubmit = false
         } label: {
             Text(isCreatingAccount ? "已有账号？登录" : "还没有账号？创建账号")
-                .font(.subheadline.weight(.semibold))
+                .font(ShengbianTypography.subheadline.weight(.semibold))
                 .frame(maxWidth: .infinity)
         }
-        .foregroundStyle(.white)
+            .foregroundStyle(ShengbianColors.primaryText)
     }
 
     private var isValid: Bool {
@@ -209,10 +192,10 @@ private struct LoginField: View {
         }
         .padding(.horizontal, 16)
         .frame(height: 54)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+        .background(ShengbianColors.glassTint, in: RoundedRectangle(cornerRadius: ShengbianMetrics.controlRadius, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(Color.white.opacity(0.12))
+            RoundedRectangle(cornerRadius: ShengbianMetrics.controlRadius, style: .continuous)
+                .strokeBorder(ShengbianColors.glassBorder)
         }
     }
 }
