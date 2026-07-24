@@ -11,7 +11,8 @@ Current ownership boundary:
 | iOS UI and navigation | SwiftUI screens, role routing, local interaction state, accessibility | None |
 | Authentication | Custom login and registration UI, session states, validation and error presentation | Account API, credentials, tokens, refresh and revocation |
 | PAWN | Conversation UI, recording/transcript presentation, streaming/loading/error controls | Context storage, orchestration, generation jobs and artifact validation |
-| Ring | Pairing and device-state UI, CoreBluetooth lifecycle on iOS | Ring protocol and SDK behavior not exposed through the agreed iOS contract |
+| Inspiration | Capture recording UI, transcript/QA/pack presentation, privacy selection, project assignment, mind-map visualization | Server-owned capture records, generation jobs and cross-device sync |
+| Ring | Optional-accessory pairing and device-state UI, CoreBluetooth lifecycle, double-press/double-tap capture trigger. The `RingSound` Swift SDK is vendored in-tree and wrapped by `RingManager`. | Ring firmware/protocol behavior not exposed through the agreed iOS contract |
 | Audio | Permission UI, recording controls and available iOS audio-route presentation | External hardware capability claims not exposed by Apple APIs |
 | Injective | Commercial state, authorization preview, transaction progress, failure and explorer link presentation | Wallet custody, transaction creation, broadcast, confirmation and canonical chain record |
 
@@ -46,7 +47,7 @@ Creator tabs:
 | PAWN | `PawnWorkspaceView` | Existing PAWN demonstration workspace |
 | Account | `AccountView` | Local account, role switch and logout |
 
-Creator project navigation now uses the persisted `CreatorProject.id`. Both the Home current-work card and rows in `CreatorProjectsView` open `ProjectDetailView(projectID:)`, which resolves the latest project value from `AppStore`. The detail screen exposes the existing lifecycle action, creative goal, current-stage activity, PAWN workspace, and artifact entry points. Artifact destinations are actionable local empty states only; they do not represent generated or persisted artifact records.
+Creator project navigation now uses the persisted `CreatorProject.id`. Both the Home current-work card and rows in `CreatorProjectsView` open `ProjectDetailView(projectID:)`, which resolves the latest project value from `AppStore`. The detail screen exposes the existing lifecycle action, creative goal, current-stage activity, linked inspirations, and a "创作台" section with six entries: the PAWN workspace, a mind map, and four artifact entry points. The mind map (`MindMapView`) renders the project structure (project -> inspirations -> PAWN three-question summary / production pack, plus the PAWN conversation node) as a force-directed graph using the Grape package. Artifact destinations are actionable local empty states only; they do not represent generated or persisted artifact records.
 
 Brand/client tabs:
 
@@ -67,6 +68,8 @@ The creator's future brand-interest inbox must be opened from a visible toolbar 
 
 The current PAWN response is a deterministic local demonstration streamed in short text segments. Stop and regenerate mutate the same local conversation; they do not call or imply success from a PAWN backend. Reduce Motion bypasses segmented presentation and writes the complete response immediately. File import uses `fileImporter`, but the current model stores only the selected file's display name and import time. It does not copy, upload, bookmark, or retain access to the selected file contents.
 
+`AppStore` also stores `[InspirationCapture]` as JSON under `inspirations.v1`. Each capture carries an opaque `id`, `transcription` text, the PAWN three-question answers (`[PawnQA]`), an optional generated `BilibiliPack` (title, hook, outline, shot list), an optional `projectID` link, an `InspirationPrivacy` level (`privateOnly | projectMembers | publicContent`, default private), a creation time, and an `isDemoFallback` flag for visibly-marked demo data. `InspirationRecordView` captures a new inspiration (voice + tap is the primary path; an optional paired ring double-press/double-tap can also trigger it), `InspirationDetailView` presents one, and `AssignInspirationView` links a capture to a project. All transcription and QA text is local plaintext and is not uploaded.
+
 Current `CreatorProject` fields:
 
 | Field | Type | Notes |
@@ -82,11 +85,11 @@ Missing first-class frontend models include:
 
 - Public workshop entry and published artifact reference.
 - Brand profile summary, one-way follow or interest event, and creator contact authorization.
-- Inspiration, recording, transcript, privacy level and project assignment.
+- Inspiration capture, transcript, three-question answers, privacy level and project assignment now have a local first-class model (`InspirationCapture`), but server-owned capture records, generation jobs and cross-device sync are not implemented.
 - Generation job, artifact and artifact version. Project conversations, messages, and attachment metadata now have local first-class models, but backend IDs and attachment file persistence are not implemented.
 - Activity, attachment, commercial brief, submission, authorization and transaction record.
 
-Persisted model migrations must be explicit and must preserve existing `creatorProjects.v1` data.
+Persisted model migrations must be explicit and must preserve existing `creatorProjects.v1`, `pawnConversations.v1`, and `inspirations.v1` data.
 
 `AppSession` stores `CreatorProfile` JSON under `session.creatorProfile.v1` and the pending setup route under `session.needsCreatorProfileSetup`. The profile contains structured `ProfileValue`, social-account and contact-method records. Each record carries one of `privateOnly`, `workshopPublic`, `brandsOnly`, or `authorizedBrands`; defaults are private. These values currently express local user intent only and do not publish or authorize any backend disclosure.
 
@@ -194,12 +197,15 @@ Fixture actions must not claim that a brand was contacted, private data was disc
 
 Request microphone, Bluetooth, Photos, Files, notifications and local-network access only when the related action is initiated. Each denial state must offer a clear consequence, System Settings when useful, and a Not Now path.
 
+The Zilo ring is an optional accessory. Voice + tap is the primary capture path, and every capture and PAWN flow must remain fully usable without a paired ring. Bluetooth is requested only when the user chooses to pair a ring, and a missing or disconnected ring must never block capture.
+
 Do not expose unsupported battery, firmware, headphone, ring or audio-route values. Unknown and unavailable are valid explicit states.
 
 ## 10. Frontend validation checklist
 
 For every integration-facing feature:
 
+- On a fresh checkout, resolve Swift Package dependencies before building. The project depends on the remote package `Grape` (`github.com/li3zhen1/Grape`, up-to-next-major from `1.1.0`) for the mind-map view; `Package.resolved` is tracked, and Xcode resolves it automatically on first open.
 - Build the `inspireFlow` scheme.
 - Exercise creator and brand routing separately.
 - Test a clean install and returning launch when entry flow changes.
@@ -213,7 +219,8 @@ For every integration-facing feature:
 
 - Authentication and role switching are local demo behavior.
 - Projects use a small `UserDefaults` model without migration support.
-- PAWN capture and messages are demonstration flows rather than backend-owned project conversations.
+- PAWN capture and messages are demonstration flows rather than backend-owned project conversations; inspirations are persisted locally (`InspirationCapture`) but not synced to a backend.
+- The mind map is a local visualization of already-persisted project data (`MindMapView` via Grape); it does not fetch or mutate any backend state.
 - Client messages are static.
 - Creator profile setup is local-only; account-scoped sync, public workshop publication, brand discovery, follow/interest and server-enforced contact authorization are not implemented.
-- Ring, audio, permission and Injective production integrations are not complete.
+- The `RingSound` SDK is integrated and wrapped by `RingManager` as an optional accessory, but it has not been validated against real ring hardware. Audio, permission and Injective production integrations are not complete.

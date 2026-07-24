@@ -33,6 +33,7 @@ enum ShengbianColors {
 
     static let primaryText = Color.primary
     static let secondaryText = Color.secondary
+
     static let tertiaryText = Color(
         light: UIColor(white: 0, alpha: 0.42),
         dark: UIColor(white: 1, alpha: 0.38)
@@ -49,18 +50,18 @@ enum ShengbianColors {
     )
 
     static let listening = Color(
-        light: UIColor(red: 0.78, green: 0.12, blue: 0.14, alpha: 1),
-        dark: UIColor(red: 1, green: 0.34, blue: 0.35, alpha: 1)
+        light: UIColor.black,
+        dark: UIColor.white
     )
 
     static let success = Color(
-        light: UIColor(red: 0.08, green: 0.52, blue: 0.27, alpha: 1),
-        dark: UIColor(red: 0.31, green: 0.84, blue: 0.5, alpha: 1)
+        light: UIColor(white: 0.12, alpha: 1),
+        dark: UIColor(white: 0.92, alpha: 1)
     )
 
     static let warning = Color(
-        light: UIColor(red: 0.78, green: 0.45, blue: 0.03, alpha: 1),
-        dark: UIColor(red: 1, green: 0.7, blue: 0.25, alpha: 1)
+        light: UIColor(white: 0.3, alpha: 1),
+        dark: UIColor(white: 0.7, alpha: 1)
     )
 
     static let grid = Color(

@@ -176,7 +176,7 @@ struct ProjectDetailView: View {
 
     private func artifactSection(_ project: CreatorProject) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            ShengbianSectionHeader(title: "创作台", detail: "5 个入口")
+            ShengbianSectionHeader(title: "创作台", detail: "6 个入口")
 
             NavigationLink {
                 ProjectPawnWorkspaceView(projectID: project.id)
@@ -186,6 +186,18 @@ struct ProjectDetailView: View {
                     detail: "围绕这个项目推进上下文",
                     symbol: "sparkles",
                     action: "打开"
+                )
+            }
+            .buttonStyle(.plain)
+
+            NavigationLink {
+                MindMapView(projectID: project.id)
+            } label: {
+                workspaceRow(
+                    title: "脑图",
+                    detail: "用力导向图查看项目结构",
+                    symbol: "point.3.connected.trianglepath.dotted",
+                    action: "查看"
                 )
             }
             .buttonStyle(.plain)

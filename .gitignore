@@ -12,11 +12,16 @@ xcuserdata/
 # Xcode build output
 build/
 DerivedData/
+.build-*/
 *.moved-aside
 *.hmap
 *.ipa
 *.dSYM
 *.dSYM.zip
+
+# xcodebuild result bundles and logs
+*.xcresult
+ResultBundle_*.xcresult
 
 # Xcode playground
 timeline.xctimeline

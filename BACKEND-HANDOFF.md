@@ -2,7 +2,7 @@
 
 ## 1. Objective
 
-The backend owns project context, PAWN orchestration, and Injective transaction state. The iOS app owns wearable/audio interaction, local plaintext content, and presentation.
+The backend owns project context, PAWN orchestration, and Injective transaction state. The iOS app owns audio/voice capture (with an optional ring accessory), local plaintext content, and presentation.
 
 The required hackathon path is:
 
@@ -69,6 +69,8 @@ Use UUIDv7 or another sortable opaque ID. All timestamps are RFC 3339 UTC.
 
 `source`: `ring_voice | headphone_voice | phone_voice | app_text | demo_fixture`
 
+The ring is an optional accessory. The primary sources are `phone_voice`, `headphone_voice`, and `app_text`; treat `ring_voice` as equivalent voice input and never require a ring for any capture, interview, or generation step.
+
 `status`: `transcribing | interviewing | generating | completed | failed`
 
 ### Conversation turn
@@ -102,6 +104,21 @@ Use UUIDv7 or another sortable opaque ID. All timestamps are RFC 3339 UTC.
 ```
 
 Canonicalization must be documented and tested. Recommended: RFC 8785 JSON Canonicalization Scheme, then SHA-256 over UTF-8 bytes.
+
+### Frontend local model mapping
+
+The iOS app already persists a local `InspirationCapture` model (see `FRONTEND-HANDOFF.md`). When the backend replaces the local fixtures, map fields as follows so no client migration is required beyond swapping the data source:
+
+| Local field (`InspirationCapture`) | Backend field | Notes |
+| --- | --- | --- |
+| `id` (`UUID`) | `Capture.id` | Client currently generates a local UUID; replace with the server opaque ID on sync. |
+| `transcription` (`String`) | `Capture.transcript` | Local plaintext; sent only when the user explicitly starts a PAWN request. |
+| `pawnQAs` (`[PawnQA]`) | Conversation turns | Each `PawnQA` is one assistant question + one creator answer pair. |
+| `bilibiliPack` (`BilibiliPack?`) | `Artifact.content` | Maps to `type: bilibili_production_pack` (title/hook/outline/shot list). |
+| `projectID` (`UUID?`) | `Capture.project_id` | Optional until the capture is assigned to a project. |
+| `privacy` (`privateOnly \| projectMembers \| publicContent`) | `Capture.visibility` (`private \| project_members \| public`) | Enum names differ; values correspond one-to-one. |
+| `createdAt` (`Date`) | `Capture.created_at` | RFC 3339 UTC on the wire. |
+| `isDemoFallback` (`Bool`) | `Capture.source = demo_fixture` | Demo captures must stay visibly identified and must not imply backend success. |
 
 ## 4. HTTP API
 

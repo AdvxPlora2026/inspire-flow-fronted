@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		B9D3705F3013295A00A39BA2 /* Grape in Frameworks */ = {isa = PBXBuildFile; productRef = B9D36C0130000001000000A1 /* Grape */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		B9D36BC63011E5B200A39BA2 /* inspireFlow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = inspireFlow.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -51,6 +55,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B9D3705F3013295A00A39BA2 /* Grape in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -93,6 +98,7 @@
 			);
 			name = inspireFlow;
 			packageProductDependencies = (
+				B9D36C0130000001000000A1 /* Grape */,
 			);
 			productName = inspireFlow;
 			productReference = B9D36BC63011E5B200A39BA2 /* inspireFlow.app */;
@@ -122,6 +128,9 @@
 			);
 			mainGroup = B9D36BBD3011E5B200A39BA2;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				B9D36C0030000001000000A0 /* XCRemoteSwiftPackageReference "Grape" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B9D36BC73011E5B200A39BA2 /* Products */;
 			projectDirPath = "";
@@ -366,6 +375,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		B9D36C0030000001000000A0 /* XCRemoteSwiftPackageReference "Grape" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/li3zhen1/Grape";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.1.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B9D36C0130000001000000A1 /* Grape */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B9D36C0030000001000000A0 /* XCRemoteSwiftPackageReference "Grape" */;
+			productName = Grape;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = B9D36BBE3011E5B200A39BA2 /* Project object */;
 }
