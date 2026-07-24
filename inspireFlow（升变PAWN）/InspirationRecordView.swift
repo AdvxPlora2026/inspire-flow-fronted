@@ -2,6 +2,7 @@ import SwiftUI
 
 struct InspirationRecordView: View {
     @EnvironmentObject private var appStore: AppStore
+    @EnvironmentObject private var ring: RingManager
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -63,6 +64,7 @@ struct InspirationRecordView: View {
         }
         .preferredColorScheme(.dark)
         .onDisappear { stopTimer() }
+        .onReceive(ring.captureSignal) { handleCaptureToggle() }
     }
 
     // MARK: - Toolbar
@@ -502,7 +504,7 @@ struct InspirationRecordView: View {
     }
 
     private func simulateTranscription() {
-        let demo = "我想做一期关于用戒指捕捉灵感、再由 PAWN 完成 B 站创作方案的视频。"
+        let demo = "我想做一期关于随手用语音捕捉灵感、再由 PAWN 完成 B 站创作方案的视频。"
         var index = demo.startIndex
 
         Task { @MainActor in
@@ -535,10 +537,10 @@ struct InspirationRecordView: View {
         }
 
         let pack = BilibiliPack(
-            title: "我用一枚戒指，接住了差点消失的灵感",
+            title: "我用一句话，接住了差点消失的灵感",
             hook: "最好的创作工具，也许根本没有屏幕。",
-            outline: "灵感丢失 → 戒指唤醒 → 耳机追问 → PAWN 成片",
-            shotList: "现场走拍、戒指特写、耳机反馈、方案结果页"
+            outline: "灵感丢失 → 一句话录下 → PAWN 追问 → 成片",
+            shotList: "现场走拍、开口瞬间、追问反馈、方案结果页"
         )
 
         let capture = appStore.addInspiration(
@@ -593,4 +595,5 @@ private enum RecordPhase {
 #Preview("InspirationRecordView") {
     InspirationRecordView()
         .environmentObject(AppStore())
+        .environmentObject(RingManager())
 }

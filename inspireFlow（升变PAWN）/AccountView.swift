@@ -3,6 +3,7 @@ import SwiftUI
 struct AccountView: View {
     @EnvironmentObject private var session: AppSession
     @EnvironmentObject private var appStore: AppStore
+    @EnvironmentObject private var ring: RingManager
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = true
     @State private var isConfirmingSignOut = false
     @State private var isEditingCreatorProfile = false
@@ -44,7 +45,47 @@ struct AccountView: View {
                     }
 
                     Label("本地内容已加密", systemImage: "lock.fill")
-                    Label("设备与权限", systemImage: "dot.radiowaves.left.and.right")
+                }
+
+                Section {
+                    HStack {
+                        Label(ring.state.title, systemImage: ring.isConnected ? "dot.radiowaves.left.and.right" : "circle.dashed")
+                            .foregroundStyle(ring.isConnected ? .green : .secondary)
+                        Spacer()
+                        if let battery = ring.batteryPercent {
+                            Text("\(battery)%").foregroundStyle(.secondary)
+                        }
+                    }
+
+                    if let name = ring.deviceName {
+                        Label(name, systemImage: "circle.circle")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if ring.isConnected {
+                        Button(role: .destructive) {
+                            ring.disconnect()
+                        } label: {
+                            Label("断开连接", systemImage: "xmark.circle")
+                        }
+                    } else {
+                        Button {
+                            ring.scanAndConnect()
+                        } label: {
+                            Label(ring.state == .scanning ? "扫描中…" : "扫描并连接戒指", systemImage: "antenna.radiowaves.left.and.right")
+                        }
+                        .disabled(ring.state == .scanning || ring.state == .connecting)
+                    }
+
+                    if case .failed(let message) = ring.state {
+                        Text(message)
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
+                } header: {
+                    Text("Zilo 戒指（可选配件）")
+                } footer: {
+                    Text("戒指用于无屏触发捕捉，不连接也能正常使用全部功能。")
                 }
 
                 Section("帮助") {

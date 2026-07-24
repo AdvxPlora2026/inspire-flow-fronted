@@ -53,17 +53,17 @@ struct InspirationCapture: Codable, Identifiable, Hashable {
     static func demo() -> InspirationCapture {
         InspirationCapture(
             id: UUID(),
-            transcription: "我想做一期关于用戒指捕捉灵感、再由 PAWN 完成 B 站创作方案的视频。",
+            transcription: "我想做一期关于随手用语音捕捉灵感、再由 PAWN 完成 B 站创作方案的视频。",
             pawnQAs: [
                 PawnQA(id: UUID(), question: "这条视频最想讲给谁看？", answer: "第一次尝试无屏创作的 B 站创作者"),
                 PawnQA(id: UUID(), question: "你希望它是什么形式？", answer: "60 秒现场竖屏短视频"),
                 PawnQA(id: UUID(), question: "最重要的开场画面是什么？", answer: "创作者正在拍摄，却突然冒出一个灵感")
             ],
             bilibiliPack: BilibiliPack(
-                title: "我用一枚戒指，接住了差点消失的灵感",
+                title: "我用一句话，接住了差点消失的灵感",
                 hook: "最好的创作工具，也许根本没有屏幕。",
-                outline: "灵感丢失 → 戒指唤醒 → 耳机追问 → PAWN 成片",
-                shotList: "现场走拍、戒指特写、耳机反馈、方案结果页"
+                outline: "灵感丢失 → 一句话录下 → PAWN 追问 → 成片",
+                shotList: "现场走拍、开口瞬间、追问反馈、方案结果页"
             ),
             projectID: nil,
             privacy: .privateOnly,
@@ -138,7 +138,7 @@ struct CreatorProject: Codable, Identifiable, Hashable {
     static let demo = CreatorProject(
         id: UUID(),
         name: "AdventureX 创作幕后",
-        initialIdea: "记录用戒指捕捉灵感，再由 PAWN 完成 B 站创作方案的全过程。",
+        initialIdea: "记录随手用语音捕捉灵感，再由 PAWN 完成 B 站创作方案的全过程。",
         kind: .commercial,
         stage: .creating,
         createdAt: .now

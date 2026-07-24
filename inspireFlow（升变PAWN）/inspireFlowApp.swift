@@ -11,6 +11,7 @@ import SwiftUI
 struct inspireFlowApp: App {
     @StateObject private var appStore = AppStore()
     @StateObject private var session = AppSession()
+    @StateObject private var ringManager = RingManager()
 
     @AppStorage("hasCompletedOnboarding")
     private var hasCompletedOnboarding = false
@@ -20,6 +21,12 @@ struct inspireFlowApp: App {
             RootView(hasCompletedOnboarding: $hasCompletedOnboarding)
             .environmentObject(appStore)
             .environmentObject(session)
+            .environmentObject(ringManager)
+            .task {
+                if ringManager.hasSavedRing {
+                    ringManager.reconnectSaved()
+                }
+            }
         }
     }
 }

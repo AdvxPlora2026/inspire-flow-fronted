@@ -60,7 +60,7 @@ struct CreatorHomeView: View {
                 VStack(spacing: 6) {
                     Text("捕捉灵感")
                         .font(ShengbianTypography.title2)
-                    Text("双击 Zilo 戒指，或轻点开始")
+                    Text("轻点开始，或双击戒指")
                         .font(ShengbianTypography.subheadline)
                         .foregroundStyle(ShengbianColors.secondaryText)
                 }
@@ -95,7 +95,7 @@ struct CreatorHomeView: View {
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel("捕捉灵感，PAWN 已准备好")
-            .accessibilityHint("双击 Zilo 戒指或轻点屏幕开始说话")
+            .accessibilityHint("轻点屏幕开始说话，也可双击 Zilo 戒指")
         }
         .buttonStyle(.plain)
     }

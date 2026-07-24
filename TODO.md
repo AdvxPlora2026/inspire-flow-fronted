@@ -104,10 +104,10 @@ Acceptance: a judge can complete the flow twice in a row without restarting the 
 - [X] Repair the local Python event demo import and connection lifecycle.
 - [X] Confirm the compatible Swift package and public API from `AdvxPlora2026/zilo-whisper-ring-sdk` v2.0.0.
 - [X] Add the iOS Bluetooth usage description.
-- [ ] Add the `RingSound` Swift package to Xcode after package resolution is available.
-- [ ] Scan by NUS service and persist the CoreBluetooth peripheral UUID, not a MAC address.
-- [ ] Map key double press to capture, rotate front to confirm, rotate back to cancel, and wave to privacy.
-- [ ] Show disconnect state and one-tap reconnect without blocking the current draft.
+- [X] Add the `RingSound` Swift package to Xcode after package resolution is available.
+- [X] Scan by NUS service and persist the CoreBluetooth peripheral UUID, not a MAC address.
+- [~] Map key double press to capture, rotate front to confirm, rotate back to cancel, and wave to privacy. (key double press + double tap wired to capture; rotate/wave gestures not yet mapped)
+- [X] Show disconnect state and one-tap reconnect without blocking the current draft.
 
 Acceptance: at least one physical ring event visibly advances the same business flow shown in the app.
 

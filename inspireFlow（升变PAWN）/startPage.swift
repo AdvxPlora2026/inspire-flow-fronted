@@ -270,12 +270,12 @@ private struct OnboardingPage: Identifiable {
         OnboardingPage(
             id: 0,
             eyebrow: "第一步：接住灵感",
-            title: "双击戒指，说出来",
-            detail: "灵感出现的那一刻，双击 Zilo 戒指就能开始录音。PAWN 全程本地运行，不需要网络，不打断当下的状态。",
+            title: "想到就说，轻点即录",
+            detail: "灵感出现的那一刻，轻点屏幕就能开始录音。PAWN 全程本地运行，不需要网络，不打断当下的状态。",
             symbol: "waveform",
             features: [
-                "戒指触发，耳机私密反馈",
-                "完全本地，随时可用"
+                "轻点即录，随时可用",
+                "可选：Zilo 戒指无屏触发"
             ]
         ),
         OnboardingPage(
